@@ -40,3 +40,29 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local SQLite (SAFR audit log, registry) — runtime state, per developer
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# keys (agent private key belongs in .env.local only)
+*.key
+
+# logs
+*.log
+/logs/
+
+# editors
+.vscode/
+.idea/
+*.swp
+
+# personal AI-agent settings
+.claude/settings.local.json
