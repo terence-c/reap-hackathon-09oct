@@ -5,7 +5,7 @@
 2. Test card for hosted EXTERNAL enrollment page? →
 3. returnUrl rules (HTTPS / allowlist)? → docs: must be HTTPS (enrollment and checkout). Allowlist: ask.
 4. Exact sandbox host + Reap-Version value → host: https://sg.sandbox.api.reap.global · Reap-Version: 2025-02-14 (both from Reap's API reference)
-5. Are amounts in cents (1079) or dollars (10.79)? → docs only say `number`; check the first real quote for the S$10.79 book.
+5. Are amounts in cents (1079) or dollars (10.79)? → **Decision: integer cents end to end.** Treat Reap amounts as cents, no conversion. If A's first real quote for the S$10.79 book shows `10.79`, fix it in the adapter then.
 
 ## Running URLs
 - ngrok: 
@@ -16,5 +16,5 @@
 - Quote totals are nested: `amountBreakdown.finalAmount`, `.itemsSubtotal`, `.shipping`, `.tax.amount`. There is no top-level `finalAmount`.
 - `POST /agentic/checkouts` returns no `orderId`; read it from `GET /agentic/checkouts/:id` once `status` is `COMPLETED`.
 - Shipping option endpoint is `POST /agentic/quotes/:id/shipping`.
-- The `items: [{ variantId }]` quote fallback expects Reap's own variant IDs (from `/agentic/products/*`); the Shopify IDs in `catalog.json` may be rejected. Verify before relying on it.
+- The `items: [{ variantId }]` quote fallback expects Reap's own variant IDs (from `/agentic/products/*`); the Shopify IDs in `catalog.json` may be rejected. **Decision: A builds the adapter first; the team fixes whatever errors show up after.**
 - gpt-6-luna allows tool calls on Chat Completions only with `reasoning_effort: "none"`; `lib/agent/model.ts` sends it automatically.
