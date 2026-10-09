@@ -44,6 +44,15 @@ npm run e2e                  # Role A: quote → checkout → poll, prints order
 
 Reap base URL is https://sg.sandbox.api.reap.global — always import it from lib/env.ts, never hardcode.
 
+
+## Setup notes (verified on this machine)
+
+- AI SDK v5 is pinned (`ai@5.0.271`, `@ai-sdk/react@2.0.274`): use `stopWhen: stepCountIs(6)` — `maxSteps` no longer exists. `useChat` takes a `DefaultChatTransport({ api })` transport.
+- Run `npx next typegen` (or `next dev`/`build`) before `tsc` — global `PageProps`/`LayoutProps` helpers are generated into `.next/types`.
+- Role C's extra tests live outside the repo (temporary vitest config + specs under /tmp); they are not part of `npm test`.
+- `OPENAI_API_KEY` in `.env.local` must be non-empty for `POST /api/agent` to stream; the route returns 503 until it is set. `GET/PATCH /api/agent/state` is the stub state endpoint until Role B's `/api/registry` and `/api/audit` exist.
+- Dev server may be on a non-3000 port if 3000 is taken; check with `lsof -iTCP:<port> -sTCP:LISTEN`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
@@ -53,3 +62,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## UI preferences
+
+- Light theme with colorful pastel accents; no dark panels.
+- Plain, human language in user-facing copy; avoid technical jargon.
+- Never use em dashes or en dashes in user-facing text.

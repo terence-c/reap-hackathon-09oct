@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f8f9fd;
+  --foreground: #263147;
 }
 
 @theme inline {
+  --color-paper: #f8f9fd;
+  --color-white: #ffffff;
+  --color-ink: #263147;
+  --color-muted: #657087;
+  --color-line: #e1e5ef;
+  --color-violet: #6554c0;
+  --color-blue: #265dc6;
+  --color-teal: #087b66;
+  --color-orange: #9a4b14;
+  --color-red: #b91c1c;
+  --color-lavender: #eee8ff;
+  --color-mint: #e4f4e9;
+  --color-sky: #e4efff;
+  --color-peach: #fff0e5;
+  --color-rose: #fff0f4;
+  --color-butter: #fff6d9;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.ac-display {
+  font-size: clamp(44px, 5vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  font-weight: 500;
+}
+
+.ac-eyebrow {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.ac-label {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ac-reveal {
+  animation: ac-in 0.4s ease backwards;
+}
+.ac-reveal-1 { animation-delay: 0.05s; }
+.ac-reveal-2 { animation-delay: 0.12s; }
+.ac-reveal-3 { animation-delay: 0.19s; }
+.ac-reveal-4 { animation-delay: 0.26s; }
+
+@keyframes ac-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ac-tile {
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.ac-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-ink);
+}
+
+.ac-focus-ring:focus-visible {
+  outline: 2px solid var(--color-violet);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
