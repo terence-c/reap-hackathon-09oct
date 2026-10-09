@@ -12,6 +12,7 @@ import catalogJson from "../catalog.json";
 import { env } from "../env";
 import type {
   CatalogItem,
+  Checkout,
   CheckoutStatus,
   Disposition,
   Envelope,
@@ -44,6 +45,7 @@ import { DEMO_SHIPPING_ADDRESS } from "../reap/quotes";
 import { reapAdapter } from "./reap-adapter";
 
 export const APPROVAL_WINDOW_MS = 5 * 60 * 1000;
+export const SIMULATED_PREFIX = "sim_";
 
 const CatalogSchema = z.array(
   z.object({
@@ -109,6 +111,7 @@ export type GateDeps = {
   email?: () => string;
   shippingAddress?: ShippingAddress;
   catalog?: CatalogItem[];
+  simulateWithoutCard?: () => boolean;
 };
 
 export type SafrGate = Gate & {
@@ -133,6 +136,14 @@ export function createGate(deps: GateDeps): SafrGate {
   const email = deps.email ?? (() => env.DEMO_EMAIL);
   const shippingAddress = deps.shippingAddress ?? DEMO_SHIPPING_ADDRESS;
   const catalog = deps.catalog ?? CATALOG;
+  const simulateWithoutCard = deps.simulateWithoutCard ?? (() => env.DEMO_SIMULATE_WITHOUT_CARD === "true");
+  const hasCard = () => {
+    try {
+      return !!enrollmentId();
+    } catch {
+      return false;
+    }
+  };
 
   function sealEnvelope(quote: Quote, mandate: Mandate, sessionId: string, toolTrace: string[], agentReason: string) {
     const agent = getAgent(agentId);
@@ -184,6 +195,16 @@ export function createGate(deps: GateDeps): SafrGate {
       { mandateId: envelope.context.mandateId, merchantDomain: envelope.action.merchantDomain, amount: envelope.action.amount },
       t,
     );
+    if (simulateWithoutCard() && !hasCard()) {
+      const id = `${SIMULATED_PREFIX}${envelope.hash.slice(0, 24)}`;
+      audit.markExecuted(seq, id);
+      return {
+        decision: disposition.decision,
+        message: `${disposition.reason} No Reap card is on file, so this is a simulated checkout: no Reap order is created and no money moves.`,
+        checkoutId: id,
+        envelopeHash: envelope.hash,
+      };
+    }
     try {
       const checkout = await deps.reap.createCheckout({
         quoteId: envelope.action.quoteId,
@@ -443,4 +464,17 @@ export function assertExecutable(envelopeHash: string, quoteId: string): boolean
     entry.envelope.action.quoteId === quoteId &&
     getReservation(envelopeHash)?.status === "RESERVED"
   );
+}
+
+// Status of a simulated checkout (DEMO_SIMULATE_WITHOUT_CARD): always COMPLETED, labeled as simulated.
+export function simulatedCheckout(checkoutId: string): Checkout | null {
+  if (!checkoutId.startsWith(SIMULATED_PREFIX)) return null;
+  const entry = audit.findByCheckoutId(checkoutId);
+  if (!entry) return null;
+  return {
+    id: checkoutId,
+    status: "COMPLETED",
+    orderId: `SIMULATED-${checkoutId.slice(SIMULATED_PREFIX.length, SIMULATED_PREFIX.length + 8).toUpperCase()}`,
+    finalAmount: entry.envelope.action.amount,
+  };
 }

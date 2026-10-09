@@ -32,10 +32,27 @@ function save(e: { id: string; status: EnrollmentStatus; url?: string }, ownerId
     .run(e.id, ownerId, e.status, e.url ?? null, now, now);
 }
 
-// The most recent enrollment we know about (any status), without calling Reap.
+// The card to show: the newest ACTIVE enrollment, else the most recent one of any status. No Reap call.
 export function currentEnrollment(): Enrollment | null {
-  const row = db().prepare(`SELECT * FROM reap_enrollments ORDER BY updated_at DESC LIMIT 1`).get() as Row | undefined;
+  const row = db()
+    .prepare(`SELECT * FROM reap_enrollments ORDER BY (status = 'ACTIVE') DESC, updated_at DESC LIMIT 1`)
+    .get() as Row | undefined;
   return row ? toEnrollment(row) : null;
+}
+
+// Re-check every enrollment still waiting for card details (Reap can take a while to mark one ACTIVE).
+export async function refreshPendingEnrollments(): Promise<void> {
+  const rows = db().prepare(`SELECT id, owner_id FROM reap_enrollments WHERE status = 'REQUIRES_ACTION'`).all() as {
+    id: string;
+    owner_id: string;
+  }[];
+  await Promise.all(
+    rows.map((r) =>
+      refreshEnrollment(r.id, r.owner_id).catch((err) =>
+        console.warn(`[enrollment] refresh ${r.id} failed: ${err instanceof Error ? err.message : err}`),
+      ),
+    ),
+  );
 }
 
 // What the gate charges: the newest ACTIVE enrollment from the app, else REAP_ENROLLMENT_ID.

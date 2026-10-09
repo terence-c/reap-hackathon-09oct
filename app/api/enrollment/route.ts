@@ -6,22 +6,15 @@
 import { connection, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 import { isSameOrigin } from "@/lib/agent/http";
-import { createEnrollment, currentEnrollment, refreshEnrollment } from "@/lib/reap/enrollments";
+import { createEnrollment, currentEnrollment, refreshPendingEnrollments } from "@/lib/reap/enrollments";
 import { loadMandate } from "@/lib/safr/controls";
 
 const noStore = { "cache-control": "no-store" };
 
 export async function GET() {
   await connection();
-  let enrollment = currentEnrollment();
-  if (enrollment?.status === "REQUIRES_ACTION") {
-    try {
-      enrollment = await refreshEnrollment(enrollment.id, loadMandate().principalId);
-    } catch (err) {
-      console.warn(`[enrollment] refresh failed: ${err instanceof Error ? err.message : err}`);
-    }
-  }
-  return Response.json({ enrollment }, { headers: noStore });
+  if (currentEnrollment()?.status !== "ACTIVE") await refreshPendingEnrollments();
+  return Response.json({ enrollment: currentEnrollment() }, { headers: noStore });
 }
 
 export async function POST(request: NextRequest) {

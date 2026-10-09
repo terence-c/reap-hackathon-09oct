@@ -9,7 +9,7 @@
 
 import { connection, type NextRequest } from "next/server";
 import { reapAdapter, ReapError } from "@/lib/reap";
-import { checkoutIdForEnvelope, recordCheckoutOutcome } from "@/lib/safr/gate";
+import { checkoutIdForEnvelope, recordCheckoutOutcome, simulatedCheckout } from "@/lib/safr/gate";
 
 const ENVELOPE_HASH = /^[0-9a-f]{64}$/;
 const CHECKOUT_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -39,9 +39,10 @@ export async function GET(request: NextRequest) {
     return reply({ error: "Pass envelopeHash or checkoutId" }, 400);
   }
 
-  let checkout;
+  let checkout = simulatedCheckout(checkoutId);
+  const simulated = checkout !== null;
   try {
-    checkout = await reapAdapter.getCheckout(checkoutId);
+    checkout ??= await reapAdapter.getCheckout(checkoutId);
   } catch (err) {
     const detail = err instanceof ReapError ? err.code : err instanceof Error ? err.message : String(err);
     console.error(`[checkout] Reap status check failed for ${checkoutId}: ${detail}`);
@@ -56,5 +57,6 @@ export async function GET(request: NextRequest) {
     ...(checkout.orderId ? { orderId: checkout.orderId } : {}),
     ...(checkout.finalAmount ? { finalAmount: checkout.finalAmount } : {}),
     ...(hash ? { envelopeHash: hash } : {}),
+    ...(simulated ? { simulated: true } : {}),
   });
 }

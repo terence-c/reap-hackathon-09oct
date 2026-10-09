@@ -18,6 +18,9 @@ const appSchema = z.object({
   DEMO_EMAIL: withDefault("demo@example.com"),
   AGENT_ID: withDefault("purchasing-agent-v1"),
   AGENT_PRIVATE_KEY: optional,
+  // Demo safety net: with no ACTIVE Reap card, cleared purchases finish as a clearly labeled
+  // simulated checkout instead of failing. Real Reap checkouts are used whenever a card is active.
+  DEMO_SIMULATE_WITHOUT_CARD: z.preprocess(blank, z.enum(["true", "false"]).default("false")),
   // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.
   OPENAI_BASE_URL: urlWithDefault("https://api.openai.com/v1"),
   OPENAI_MODEL: withDefault("gpt-6-luna"),
