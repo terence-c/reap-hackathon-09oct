@@ -127,7 +127,16 @@ function PaymentCard({
             >
               {working === "check" ? "Checking..." : "Check again"}
             </button>
+            <button
+              type="button"
+              onClick={() => void addCard()}
+              disabled={working !== null}
+              className={`${button} border border-line bg-white text-ink hover:border-violet hover:text-violet`}
+            >
+              {working === "add" ? "Opening Reap..." : "Start again"}
+            </button>
           </div>
+          <p className="mt-1.5 text-[11px] text-muted">Each Reap link works once. If it says the session was used, choose Start again.</p>
         </>
       ) : (
         <>
