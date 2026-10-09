@@ -313,7 +313,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <table>
       <thead><tr><th style="width:26%">Stakeholder</th><th>What they get</th></tr></thead>
       <tbody>
-        <tr><th>Finance and operations teams</th><td>Bounded delegation: a hard cap (S$150 in the demo) and an auto-approve threshold (S$80) that the agent cannot exceed or edit. Every decision comes with one plain sentence, for example "S$90.00 is above the S$80.00 auto-approve limit, so a human must approve it."</td></tr>
+        <tr><th>Finance and operations teams</th><td>Bounded delegation: a hard cap (S$150 in the demo) and an auto-approve threshold (S$80) that the agent cannot exceed or edit. Every decision comes with one plain sentence, for example "{amount} is above the S$80.00 auto-approve limit, so a human must approve it."</td></tr>
         <tr><th>Compliance and risk</th><td>A hash-chained audit log that reconstructs any decision from the signed purchase record, the rules that fired and the reason, without trusting the agent's own account. Identity is bound to an Ed25519 signature checked against a registered public key, not to an ID string anyone can type.</td></tr>
         <tr><th>The person delegating</th><td>One place to set budget, currency, categories and dates ("Edit spending limits") and one switch to stop the agent ("Pause assistant"). Escalations expire after 5 minutes if ignored, and the money held for them is released.</td></tr>
         <tr><th>Payment providers such as Reap</th><td>A checkout request arrives only after the agent's authority has been verified, carries an idempotency key equal to the signed record's hash, and can be traced back to a structured intent record. That lowers dispute and fraud risk.</td></tr>
