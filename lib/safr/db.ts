@@ -76,6 +76,15 @@ CREATE TABLE IF NOT EXISTS reap_quotes (
   quantity INTEGER NOT NULL,
   created_at INTEGER NOT NULL
 );
+-- The card enrolled on Reap's hosted page. Card details never reach us; only Reap's enrollment id.
+CREATE TABLE IF NOT EXISTS reap_enrollments (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  url TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tool_calls (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,

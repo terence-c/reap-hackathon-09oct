@@ -11,6 +11,7 @@
     "test": "vitest run",
     "enroll": "tsx scripts/enroll.ts",
     "e2e": "tsx scripts/e2e.ts",
+    "smoke": "tsx scripts/smoke-demo.ts",
     "keygen": "tsx scripts/keygen.ts"
   },
   "dependencies": {

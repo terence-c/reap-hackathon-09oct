@@ -39,6 +39,7 @@ import { db } from "./db";
 import { checkIdentity, dispose, formatMoney } from "./disposition";
 import { buildEnvelope, canonicalize, deriveQuantity, findCatalogItem, signEnvelope, verifyEnvelope } from "./envelope";
 import { getAgent, toolTraceFor, type AgentRecord } from "./registry";
+import { activeEnrollmentId } from "../reap/enrollments";
 import { DEMO_SHIPPING_ADDRESS } from "../reap/quotes";
 import { reapAdapter } from "./reap-adapter";
 
@@ -124,8 +125,8 @@ export function createGate(deps: GateDeps): SafrGate {
   const enrollmentId =
     deps.enrollmentId ??
     (() => {
-      const id = env.REAP_ENROLLMENT_ID;
-      if (!id) throw new Error("REAP_ENROLLMENT_ID is not set — run npm run enroll");
+      const id = activeEnrollmentId();
+      if (!id) throw new Error("no card has been added yet. Add one with \"Add card\" in the app");
       return id;
     });
   const appBaseUrl = deps.appBaseUrl ?? (() => env.APP_BASE_URL);

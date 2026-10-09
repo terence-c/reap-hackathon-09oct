@@ -1,42 +1,35 @@
+// npm run enroll — CLI alternative to "Add card" in the app. Creates an EXTERNAL enrollment, prints
+// Reap's hosted card-entry URL, and waits for ACTIVE. The enrollment is stored in data/safr.db, so
+// the app uses it straight away; REAP_ENROLLMENT_ID is printed too for .env.local.
+
 import "./load-env";
 import { env } from "../lib/env";
-import { reapFetch } from "../lib/reap/client";
-
-type Enrollment = {
-  id: string;
-  status: string;
-  nextAction?: { url?: string } | null;
-};
+import { createEnrollment, refreshEnrollment } from "../lib/reap/enrollments";
+import { loadMandate } from "../lib/safr/controls";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   if (!env.APP_BASE_URL.startsWith("https://")) {
-    throw new Error("APP_BASE_URL must be an HTTPS URL for Reap hosted enrollment; run `npm run dev:https` and set APP_BASE_URL=https://localhost:3443.");
+    throw new Error("APP_BASE_URL must be HTTPS for Reap hosted enrollment: run `npm run dev:https` and set APP_BASE_URL=https://localhost:3443.");
   }
-  const enrollment = await reapFetch<Enrollment>("/agentic/enrollments", {
-    method: "POST",
-    idempotencyKey: `agentcart-enroll-${crypto.randomUUID()}`,
-    body: {
-      source: "EXTERNAL",
-      owner: { type: "CLIENT_REFERENCE", id: "demo-user-001", email: env.DEMO_EMAIL },
-      presentation: { type: "REDIRECT", returnUrl: `${env.APP_BASE_URL}/orders/enrollment-done` },
-    },
-  });
+  const ownerId = loadMandate().principalId;
+  const enrollment = await createEnrollment({ ownerId, email: env.DEMO_EMAIL, returnUrl: `${env.APP_BASE_URL}/orders/enrollment-done` });
   console.log(`Enrollment ID: ${enrollment.id}`);
-  console.log(`Hosted card-entry URL: ${enrollment.nextAction?.url ?? "(not returned)"}`);
-  console.log("Open the URL and enter the sandbox card manually. Waiting for ACTIVE...");
+  console.log(`Hosted card-entry URL: ${enrollment.url ?? "(not returned)"}`);
+  console.log("Open the URL and enter the Reap sandbox test card. Waiting for ACTIVE...");
 
-  const deadline = Date.now() + 5 * 60_000;
+  const deadline = Date.now() + 10 * 60_000;
   while (Date.now() < deadline) {
-    const current = await reapFetch<Enrollment>(`/agentic/enrollments/${encodeURIComponent(enrollment.id)}`);
+    const current = await refreshEnrollment(enrollment.id, ownerId);
     if (current.status === "ACTIVE") {
       console.log(`REAP_ENROLLMENT_ID=${current.id}`);
       return;
     }
+    if (current.status !== "REQUIRES_ACTION") throw new Error(`Enrollment ended as ${current.status}`);
     await sleep(3_000);
   }
-  throw new Error(`Enrollment ${enrollment.id} did not become ACTIVE within 5 minutes`);
+  throw new Error(`Enrollment ${enrollment.id} did not become ACTIVE within 10 minutes`);
 }
 
 main().catch((error: unknown) => {
