@@ -12,7 +12,8 @@ const MAX_MESSAGES = 40;
 const MAX_TEXT_PART = 4000;
 
 const ALLOWED_USER_PARTS = new Set(["text"]);
-const ALLOWED_ASSISTANT_PARTS = new Set(["text", "reasoning"]);
+// "step-start" marks each tool step in AI SDK v5 assistant messages; it carries no content.
+const ALLOWED_ASSISTANT_PARTS = new Set(["text", "reasoning", "step-start"]);
 const isToolPart = (type: string) => type.startsWith("tool-") || type === "dynamic-tool";
 
 const LIVE_MODE =
