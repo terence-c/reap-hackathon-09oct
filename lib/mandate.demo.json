@@ -5,7 +5,7 @@
   "currency": "SGD",
   "totalBudget": 15000,
   "autoThreshold": 8000,
-  "allowedCategories": ["Office & Business Supplies", "Computers & Electronics"],
+  "allowedCategories": ["Office & Business Supplies", "Books & Stationery"],
   "validFrom": "2026-10-09T00:00:00+08:00",
   "validTo": "2026-10-10T23:59:59+08:00",
   "killSwitch": false
