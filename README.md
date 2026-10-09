@@ -13,3 +13,5 @@ npm install
 cp .env.example .env.local
 npm run dev
 ```
+
+Full team setup, the keys to fill in, lanes and timeline: [SETUP.md](SETUP.md).

@@ -9,7 +9,7 @@ governance gate (MAS "Safeguards for Agentic Finance at Runtime" white paper).
 | Lane | Person | Owns | To-do list |
 |------|--------|------|------------|
 | A | Reap adapter | `lib/reap/`, `scripts/enroll.ts`, `scripts/e2e.ts`, `app/api/checkout/`, `app/orders/` | `TODO-A-reap-adapter.md` |
-| B | SAFR core | `lib/safr/`, `lib/types.ts`, `tests/`, `scripts/keygen.ts`, `app/api/approvals/`, `app/api/registry/`, `app/api/audit/` | `TODO-B-safr-core.md` |
+| B | SAFR core | `lib/safr/`, `lib/types.ts`, `tests/`, `scripts/keygen.ts`, `app/api/approvals/`, `app/api/registry/`, `app/api/audit/`, `app/api/mandate/` | `TODO-B-safr-core.md` |
 | C | Agent + UI | `lib/agent/`, `lib/catalog.json`, `app/page.tsx`, `app/components/`, `app/api/agent/`, `PITCH.md` | `TODO-C-agent-and-ui.md` |
 
 Shared, read-only for everyone except B: `lib/types.ts`. Shared notes: `NOTES.md`.

@@ -18,13 +18,13 @@ const appSchema = z.object({
   AGENT_PRIVATE_KEY: optional,
   // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.
   OPENAI_BASE_URL: urlWithDefault("https://api.openai.com/v1"),
-  OPENAI_MODEL: withDefault("gpt-4o-mini"),
+  OPENAI_MODEL: withDefault("gpt-6-luna"),
 });
 
 const reapSchema = z.object({
   REAP_API_KEY: required,
   REAP_BASE_URL: urlWithDefault("https://sg.sandbox.api.reap.global"),
-  REAP_API_VERSION: required,
+  REAP_API_VERSION: withDefault("2025-02-14"),
   REAP_ENROLLMENT_ID: optional,
 });
 
