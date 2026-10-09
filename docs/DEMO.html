@@ -225,9 +225,9 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <div class="status ok">
       <h4><span class="tag tag-ok">Built and tested</span></h4>
       <ul>
-        <li>SAFR gate: identity, controls, disposition, audit log (Lane B).</li>
-        <li>Reap adapter: quotes, checkouts, card enrollment, cents conversion (Lane A).</li>
-        <li>Agent with three tools and the two-pane app with approvals, pause and tamper demo (Lane C).</li>
+        <li>SAFR gate: identity, controls, disposition, audit log.</li>
+        <li>Reap adapter: quotes, checkouts, card enrollment, cents conversion.</li>
+        <li>Agent with three tools and the two-pane app with approvals, pause and tamper demo.</li>
         <li><code>npm test</code>: 66 tests in 6 files pass.</li>
       </ul>
     </div>
@@ -590,7 +590,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
         <tr><td><code>lib/safr/envelope.ts</code></td><td>Governance Envelope</td><td><code>canonicalize</code>, <code>hashEnvelope</code>, <code>buildEnvelope</code>, <code>signEnvelope</code>, <code>verifyEnvelope</code>, <code>generateAgentKeyPair</code>, <code>publicKeyFromPrivate</code>.</td></tr>
         <tr><td><code>lib/safr/gate.ts</code></td><td>The checkpoint</td><td><code>proposeCheckout</code>, <code>approve</code>, <code>decline</code>, <code>expireStaleApprovals</code>, <code>listPendingApprovals</code>, <code>recordCheckoutOutcome</code>, <code>checkoutIdForEnvelope</code>, <code>assertExecutable</code>, <code>simulatedCheckout</code>. The only code that calls <code>createCheckout</code>.</td></tr>
         <tr><td><code>lib/safr/db.ts</code></td><td>Storage</td><td>One SQLite file, <code>data/safr.db</code> (WAL mode, gitignored), with tables <code>agents</code>, <code>mandates</code>, <code>reservations</code>, <code>audit</code>, <code>approvals</code>, <code>reap_quotes</code>, <code>reap_enrollments</code>, <code>tool_calls</code>. Seeds the agent and the demo mandate on first open.</td></tr>
-        <tr><td><code>lib/safr/reap-adapter.ts</code></td><td>Door to Reap</td><td>Re-exports Lane A's <code>reapAdapter</code> from <code>lib/reap/</code>. <code>lib/safr/mock-reap.ts</code> is the in-memory stand-in used by the tests.</td></tr>
+        <tr><td><code>lib/safr/reap-adapter.ts</code></td><td>Door to Reap</td><td>Re-exports the <code>reapAdapter</code> from <code>lib/reap/</code>. <code>lib/safr/mock-reap.ts</code> is the in-memory stand-in used by the tests.</td></tr>
       </tbody>
     </table>
   </div>
@@ -1153,7 +1153,7 @@ npm run dev:https</code></pre>
     <li>Monetary Authority of Singapore. Safeguards for Agentic Finance at Runtime (SAFR). White paper, version 1.0, July 2026.</li>
     <li>Reap. Agentic Payments documentation, docs.reap.global/agentic-payments. API version 2025-02-14.</li>
     <li>Reap × 65labs Agentic Buildathon brief, Singapore, 9 October 2026. Track: Most Worthwhile Problem.</li>
-    <li>In this repository: AGENTS.md (rules and lane ownership), SETUP.md, NOTES.md (verified Reap behaviour), PITCH.md (90-second pitch), lib/types.ts (shared contract).</li>
+    <li>In this repository: SETUP.md, NOTES.md (verified Reap behaviour), PITCH.md (90-second pitch), lib/types.ts (shared contract).</li>
   </ul>
 </section>
 

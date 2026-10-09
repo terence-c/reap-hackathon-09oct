@@ -1,7 +1,7 @@
 "use client";
 
 // Polls GET /api/checkout every 2s until Reap reports a final status. Success is shown only on
-// COMPLETED (AGENTS.md rule 5); being redirected here is not proof of anything.
+// COMPLETED; being redirected here is not proof of anything.
 
 import { useEffect, useState } from "react";
 import type { CheckoutStatus, Money } from "@/lib/types";
