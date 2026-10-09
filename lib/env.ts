@@ -24,7 +24,7 @@ const appSchema = z.object({
 const reapSchema = z.object({
   REAP_API_KEY: required,
   REAP_BASE_URL: urlWithDefault("https://sg.sandbox.api.reap.global"),
-  REAP_API_VERSION: required,
+  REAP_API_VERSION: withDefault("2025-02-14"),
   REAP_ENROLLMENT_ID: optional,
 });
 

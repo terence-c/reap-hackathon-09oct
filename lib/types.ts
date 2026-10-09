@@ -115,9 +115,14 @@ export type Checkout = {
 //   GET  /agentic/enrollments/:id                poll until ACTIVE
 //   POST /agentic/quotes                         quote a cart
 //   GET  /agentic/quotes/:id                     re-read a quote (gate never trusts the agent's numbers)
-//   POST /agentic/quotes/:id/shipping-option     pick a shipping option
+//   POST /agentic/quotes/:id/shipping            pick a shipping option and re-price
 //   POST /agentic/checkouts                      create checkout (only ever called via the gate)
-//   GET  /agentic/checkouts/:id                  poll until COMPLETED | FAILED | EXPIRED
+//   GET  /agentic/checkouts/:id                  poll until COMPLETED | FAILED | EXPIRED (orderId lives here)
+//
+// Enrollment body: { source: "EXTERNAL", owner: { type: "CLIENT_REFERENCE", id, email },
+//   presentation: { type: "REDIRECT", returnUrl } } — returnUrl must be HTTPS. Hosted page = nextAction.url.
+// Quote totals come back under amountBreakdown (finalAmount, itemsSubtotal, shipping, tax.amount);
+//   Reap types amounts as `number`, so the adapter converts to integer cents (check units on the first quote).
 //
 // Every call sends `Authorization: Bearer <env.REAP_API_KEY>` and `Reap-Version: <env.REAP_API_VERSION>`.
 // Every POST that creates something also sends `Idempotency-Key`.

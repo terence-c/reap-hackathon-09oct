@@ -1,6 +1,6 @@
 # AgentCart Team Setup
 
-Clone the repo, put your lane's keys in `.env.local`, drop in your TODO file, and build against stubs until Sync 1 at 1:20. Sync 0 is done except Lane A's trip to the Reap desk for the sandbox key, `Reap-Version` and test card.
+Clone the repo, put your lane's keys in `.env.local`, drop in your TODO file, and build against stubs until Sync 1 at 1:20. Sync 0 is done except Lane A's trip to the Reap desk for the sandbox API key and test card.
 
 ## Setup
 
@@ -21,12 +21,11 @@ Each person does this once on their own laptop, in about 10 minutes.
 
 ## Keys
 
-Five blanks in `.env.local` need a value, plus `APP_BASE_URL` once ngrok runs; everything else is preset. Until a key arrives, `npm run dev` still boots, because Reap and LLM keys are only checked when code first uses them.
+Four blanks in `.env.local` need a value, plus `APP_BASE_URL` once ngrok runs; everything else is preset. Until a key arrives, `npm run dev` still boots, because Reap and LLM keys are only checked when code first uses them.
 
 | Variable | What it is | Where it comes from | Who gets it | Who needs it |
 | --- | --- | --- | --- | --- |
 | `REAP_API_KEY` | Reap sandbox API key | Reap desk, when the team registers | A, at Sync 0 | A from the start; B and C from 1:30 |
-| `REAP_API_VERSION` | Value for the `Reap-Version` header | Reap desk | A, at Sync 0 | A from the start; B and C from 1:30 |
 | `OPENAI_API_KEY` | LLM key | platform.openai.com → API keys (needs billing credit), or OpenRouter, Groq, etc. | C, before Build | C from the start; the demo laptop |
 | `REAP_ENROLLMENT_ID` | The team's card enrollment | A writes and runs `npm run enroll`, then enters the Reap test card on the hosted page | A, during Build | Anyone running a real checkout, from 1:30 |
 | `AGENT_PRIVATE_KEY` | Ed25519 key that signs every envelope | B writes and runs `npm run keygen`; the public half goes into the committed registry | B, during Build | Everyone once B's gate is wired in, from 1:30; if B regenerates it, everyone updates |
@@ -34,7 +33,7 @@ Five blanks in `.env.local` need a value, plus `APP_BASE_URL` once ngrok runs; e
 
 - Share the API keys, enrollment ID and private key in a private chat, never in `NOTES.md` or a commit: this repo is public.
 - Also from the Reap desk: the sandbox test card number, typed once on Reap's hosted page and never stored. A also needs ngrok with a free account (`ngrok config add-authtoken <token>`).
-- Leave `REAP_BASE_URL`, `DEMO_EMAIL` and `AGENT_ID` as they are. For another LLM provider, change `OPENAI_BASE_URL` and `OPENAI_MODEL` together; the model must support tool calling.
+- Leave `REAP_BASE_URL`, `REAP_API_VERSION` (`2025-02-14`, from Reap's API reference), `DEMO_EMAIL` and `AGENT_ID` as they are. For another LLM provider, change `OPENAI_BASE_URL` and `OPENAI_MODEL` together; the model must support tool calling.
 
 ## Lanes
 
@@ -42,7 +41,7 @@ Three lanes, one owner each. Edit only your own folders so commits straight to `
 
 | Lane | Owns | TODO file | Start with | Sync 1 exit criterion (1:20) |
 | --- | --- | --- | --- | --- |
-| A · Reap adapter | `lib/reap/`, `scripts/enroll.ts`, `scripts/e2e.ts`, `app/api/checkout/`, `app/orders/` | `TODO-A-reap-adapter.md` | Reap desk: key, `Reap-Version`, test card, and the three questions answered in `NOTES.md`; then `lib/reap/client.ts` | `npm run e2e` prints a COMPLETED checkout with an order ID |
+| A · Reap adapter | `lib/reap/`, `scripts/enroll.ts`, `scripts/e2e.ts`, `app/api/checkout/`, `app/orders/` | `TODO-A-reap-adapter.md` | Reap desk: API key, test card, and the open questions in `NOTES.md`; then `lib/reap/client.ts` (Reap's real request shapes are in `NOTES.md` under Gotchas) | `npm run e2e` prints a COMPLETED checkout with an order ID |
 | B · SAFR core | `lib/safr/`, `lib/types.ts`, `tests/`, `scripts/keygen.ts`, `app/api/approvals/`, `app/api/registry/`, `app/api/audit/` | `TODO-B-safr-core.md` | `lib/types.ts` is already in the repo, so review it; then `lib/safr/registry.ts` and `npm run keygen` | All disposition tests pass (`npm test`) against a hand-made fake quote |
 | C · Agent + UI | `lib/agent/`, `lib/catalog.json`, `app/page.tsx`, `app/components/`, `app/api/agent/`, `PITCH.md` | `TODO-C-agent-and-ui.md` | `lib/agent/system-prompt.ts`, then `tools.ts`, `router.ts` and `app/api/agent/route.ts`, using the model from `lib/agent/model.ts` | "buy True Singapore Ghost Stories Book 12" makes the agent list, quote and propose, and the panel shows a stubbed AUTO_EXECUTE with an envelope |
 
@@ -54,7 +53,7 @@ Times from the start of the 3-hour build. Only Lane A has Sync 0 work left; afte
 
 | When | A · Reap adapter | B · SAFR core | C · Agent + UI |
 | --- | --- | --- | --- |
-| **Sync 0** · 0:00–0:15 | Reap desk: API key, `Reap-Version`, test card | `lib/types.ts` (done) | Scaffold and catalog (done) |
+| **Sync 0** · 0:00–0:15 | Reap desk: API key, test card | `lib/types.ts` (done) | Scaffold and catalog (done) |
 | **Build** · 0:15–1:20, against stubs | client, enroll, quotes, checkouts, e2e script | registry, envelope, controls, disposition, audit log and tests | system prompt, tools, router, agent route, two-pane page |
 | **◆ Sync 1 · 1:20** | Each lane meets its exit criterion; stubs get swapped for real calls | | |
 | **Integrate** · 1:30–2:10 | checkout API route, `/orders/done` page, ngrok for `returnUrl` | `gate.ts`, approvals API, registry and audit APIs | real calls, approve card, kill switch, `PITCH.md` |
