@@ -42,6 +42,8 @@ npm run enroll               # Role A: create EXTERNAL enrollment, open hosted p
 npm run e2e                  # Role A: quote → checkout → poll, prints orderId
 ```
 
+Reap base URL is https://sg.sandbox.api.reap.global — always import it from lib/env.ts, never hardcode.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

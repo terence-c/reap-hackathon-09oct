@@ -109,6 +109,19 @@ export type Checkout = {
   nextAction?: { url: string; expiresAt: string };
 };
 
+// ---- Reap endpoints (relative to env.REAP_BASE_URL, from lib/env.ts — never hardcode the host) ----
+//
+//   POST /agentic/enrollments                    create EXTERNAL enrollment
+//   GET  /agentic/enrollments/:id                poll until ACTIVE
+//   POST /agentic/quotes                         quote a cart
+//   GET  /agentic/quotes/:id                     re-read a quote (gate never trusts the agent's numbers)
+//   POST /agentic/quotes/:id/shipping-option     pick a shipping option
+//   POST /agentic/checkouts                      create checkout (only ever called via the gate)
+//   GET  /agentic/checkouts/:id                  poll until COMPLETED | FAILED | EXPIRED
+//
+// Every call sends `Authorization: Bearer <env.REAP_API_KEY>` and `Reap-Version: <env.REAP_API_VERSION>`.
+// Every POST that creates something also sends `Idempotency-Key`.
+
 // ---- Lane interfaces (A implements ReapAdapter, B implements Gate, C consumes both) ----
 
 export interface ReapAdapter {
