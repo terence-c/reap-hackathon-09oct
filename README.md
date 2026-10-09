@@ -6,6 +6,8 @@ The agent discovers products, gets real merchant quotes through Reap Agentic Pay
 
 See `AGENTS.md` for lane ownership and rules, `TODO-A/B/C-*.md` for the build plan.
 
+Demo runbook and problem statement: [docs/DEMO.html](docs/DEMO.html)
+
 ## Quick start
 
 ```
