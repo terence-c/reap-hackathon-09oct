@@ -4,8 +4,6 @@ AI purchasing agent with runtime governance. Built for the Reap × 65labs Agenti
 
 The agent discovers products, gets real merchant quotes through Reap Agentic Payments, and proposes a checkout. A SAFR gateway (agent identity, controls repository, disposition engine, hash-chained audit log) decides Deny / Escalate / Auto-execute / Observe before anything reaches the payment rail.
 
-See `AGENTS.md` for lane ownership and rules, `TODO-A/B/C-*.md` for the build plan.
-
 Demo runbook and problem statement: [docs/DEMO.html](docs/DEMO.html)
 
 ## Quick start
@@ -23,4 +21,4 @@ Then add the payment card from the app: click "Add card" in the panel and enter 
 
 If `better-sqlite3` fails to load, your npm may skip install scripts (`npm config get ignore-scripts` prints `true`); fix it with `cd node_modules/better-sqlite3 && npx prebuild-install`.
 
-Full team setup, the keys to fill in, the step by step checkout run, lanes and timeline: [SETUP.md](SETUP.md).
+Full team setup, the keys to fill in and the step by step checkout run: [SETUP.md](SETUP.md).
