@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentCart demo runbook</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="AgentCart: the problem, the SAFR mapping, setup, and the on-camera demo script.">
+<style>
+:root {
+  color-scheme: light;
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --ink: #1d2130;
+  --muted: #5d6273;
+  --line: #e4e0d6;
+  --head: #f3f1ec;
+  --code-bg: #f6f4ef;
+  --violet: #5b45c9; --lavender: #eeeaff; --lavender-line: #d2c9fb;
+  --teal: #17795c;   --mint: #e2f5ec;     --mint-line: #a9dcc4;
+  --orange: #a3560b; --peach: #fff0e2;    --peach-line: #f3c99d;
+  --red: #b42c3d;    --rose: #fde8ea;     --rose-line: #f2b8c0;
+  --blue: #22599a;   --sky: #e5f0fc;      --sky-line: #b9d3f3;
+  --butter-ink: #735800; --butter: #fff6d3; --butter-line: #ead27f;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-text-size-adjust: 100%; }
+.layout { display: grid; grid-template-columns: 220px minmax(0, 900px); gap: 48px; justify-content: center; padding: 36px 24px 72px; }
+main { min-width: 0; }
+
+/* Table of contents */
+nav.toc { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 14px; }
+.toc-title { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+nav.toc li { counter-increment: toc; }
+nav.toc a { display: block; padding: 5px 10px; border-radius: 8px; color: var(--ink); text-decoration: none; border-left: 2px solid transparent; }
+nav.toc a::before { content: counter(toc) "  "; color: var(--muted); font-variant-numeric: tabular-nums; white-space: pre; }
+nav.toc a:hover { background: var(--lavender); color: var(--violet); }
+nav.toc a:focus-visible, a:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+/* Type */
+h1 { font-size: 46px; line-height: 1.05; letter-spacing: -.02em; margin: 6px 0 18px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.01em; margin: 72px 0 14px; padding-top: 18px; border-top: 1px solid var(--line); }
+h2 .num { display: inline-block; min-width: 1.6em; color: var(--violet); font-variant-numeric: tabular-nums; }
+h3 { font-size: 19px; line-height: 1.3; margin: 34px 0 8px; }
+h4 { font-size: 16px; margin: 20px 0 6px; }
+p { margin: 0 0 14px; }
+ul, ol { margin: 0 0 14px; padding-left: 22px; }
+li { margin: 4px 0; }
+a { color: var(--violet); }
+strong { font-weight: 650; }
+.eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.lede { font-size: 19px; line-height: 1.55; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.runbook { font-size: 15px; }
+
+/* Code */
+code, kbd { font-family: var(--mono); font-size: .86em; background: var(--code-bg); border: 1px solid #ebe7dd; border-radius: 4px; padding: .08em .35em; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 13px/1.55 var(--mono); margin: 0 0 16px; }
+pre code { background: none; border: 0; padding: 0; font-size: inherit; overflow-wrap: normal; }
+pre .c { color: #6f7486; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 14px 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+table { border-collapse: collapse; border-style: hidden; width: 100%; font-size: 14px; line-height: 1.5; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+thead th { background: var(--head); font-weight: 600; font-size: 13px; }
+tbody th { background: #faf9f6; font-weight: 600; }
+td ul { margin: 0; padding-left: 18px; }
+table.compact { font-size: 13px; }
+table.flow { font-size: 12.5px; min-width: 980px; }
+table.flow td:first-child { font-weight: 700; text-align: center; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+
+/* Badges and tags */
+.badge { display: inline-block; font: 600 11.5px/1.5 var(--mono); padding: 0 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: 1px; }
+.b-deny { background: var(--rose); color: var(--red); border-color: var(--rose-line); }
+.b-esc { background: var(--peach); color: var(--orange); border-color: var(--peach-line); }
+.b-auto { background: var(--mint); color: var(--teal); border-color: var(--mint-line); }
+.b-obs { background: var(--sky); color: var(--blue); border-color: var(--sky-line); }
+.tag { display: inline-block; font: 600 11px/1.5 var(--sans); letter-spacing: .03em; text-transform: uppercase; padding: 1px 8px; border-radius: 6px; border: 1px solid; white-space: nowrap; vertical-align: 1px; }
+.tag-todo { background: var(--butter); color: var(--butter-ink); border-color: var(--butter-line); }
+.tag-verify { background: var(--sky); color: var(--blue); border-color: var(--sky-line); }
+.tag-reap { background: var(--peach); color: var(--orange); border-color: var(--peach-line); }
+.tag-secret { background: var(--rose); color: var(--red); border-color: var(--rose-line); }
+.tag-ok { background: var(--mint); color: var(--teal); border-color: var(--mint-line); }
+
+/* Blocks */
+.closing { margin: 22px 0; padding: 16px 20px; border-left: 4px solid var(--violet); background: var(--lavender); border-radius: 0 12px 12px 0; font-size: 19px; font-weight: 600; line-height: 1.45; }
+.note { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--sky); border-radius: 0 10px 10px 0; font-size: 15px; }
+.note.warn { border-left-color: var(--orange); background: var(--peach); }
+.note.todo { border-left-color: var(--butter-ink); background: var(--butter); }
+.note > :last-child { margin-bottom: 0; }
+.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0 6px; }
+.status { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); font-size: 14px; }
+.status h4 { margin: 0 0 6px; font-size: 14px; }
+.status ul { margin: 0; padding-left: 18px; }
+.status.ok { background: var(--mint); border-color: var(--mint-line); }
+.status.todo { background: var(--butter); border-color: var(--butter-line); }
+.status.verify { background: var(--sky); border-color: var(--sky-line); }
+.status.reap { background: var(--peach); border-color: var(--peach-line); }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0 18px; }
+.card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); }
+.card h4 { margin: 0 0 6px; }
+.card p { margin: 0 0 8px; font-size: 15px; }
+.card .risk { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--rose); font-size: 14px; }
+.card.c1 { border-top: 4px solid var(--violet); }
+.card.c2 { border-top: 4px solid var(--blue); }
+.card.c3 { border-top: 4px solid var(--teal); }
+.card.c4 { border-top: 4px solid var(--orange); }
+.three { padding-left: 0; list-style: none; counter-reset: three; }
+.three li { counter-increment: three; position: relative; padding: 10px 12px 10px 46px; margin: 8px 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.three li::before { content: counter(three); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: var(--lavender); color: var(--violet); font-weight: 700; font-size: 13px; text-align: center; line-height: 24px; }
+ul.check { list-style: none; padding-left: 0; }
+ul.check li { position: relative; padding-left: 28px; }
+ul.check li::before { content: ""; position: absolute; left: 2px; top: .3em; width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--card); }
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li { counter-increment: step; position: relative; padding-left: 40px; margin: 12px 0; }
+.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 8px; background: var(--mint); color: var(--teal); font-weight: 700; font-size: 13px; text-align: center; line-height: 26px; }
+
+/* Stack diagram (HTML) */
+.stack { display: grid; gap: 0; margin: 16px 0 20px; }
+.layer { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 15px; }
+.layer h4 { margin: 0 0 4px; }
+.layer p { margin: 0; }
+.layer.l1 { background: var(--lavender); border-color: var(--lavender-line); }
+.layer.l2 { background: var(--mint); border-color: var(--mint-line); }
+.layer.l3 { background: var(--sky); border-color: var(--sky-line); }
+.joint { text-align: center; font: 12px/1.4 var(--mono); color: var(--muted); padding: 6px 0; }
+.joint::before { content: "\2193  "; white-space: pre; }
+
+/* SVG diagram */
+figure { margin: 18px 0 22px; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.diagram-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px; }
+svg.diagram { display: block; width: 100%; min-width: 720px; height: auto; }
+svg.diagram .dg-t { font: 600 13px var(--sans); fill: #1d2130; }
+svg.diagram .dg-s { font: 11.5px var(--sans); fill: #444a5a; }
+svg.diagram .dg-m { font: 11px var(--mono); fill: #444a5a; }
+svg.diagram .dg-l { font: 11px var(--sans); fill: #5d6273; }
+svg.diagram .edge { stroke: #5d6273; stroke-width: 1.5; fill: none; }
+svg.diagram .edge.dash { stroke-dasharray: 5 4; }
+
+footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+
+@media screen and (max-width: 1100px) {
+  html { scroll-padding-top: 64px; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px 56px; }
+  nav.toc { position: sticky; top: 0; z-index: 10; max-height: none; overflow-x: auto; overflow-y: hidden; margin: 0 -16px 18px; padding: 8px 16px; background: var(--paper); border-bottom: 1px solid var(--line); }
+  .toc-title { display: none; }
+  nav.toc ol { display: flex; gap: 4px; white-space: nowrap; }
+  nav.toc a { padding: 6px 10px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+  h1 { font-size: 38px; margin-top: 18px; }
+}
+@media screen and (max-width: 680px) {
+  .status-grid, .cards { grid-template-columns: minmax(0, 1fr); }
+  h2 { font-size: 24px; margin-top: 56px; }
+  .lede { font-size: 17px; }
+}
+
+@page { size: A4; margin: 15mm 14mm; }
+@page wide { size: A4 landscape; margin: 11mm; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html { scroll-behavior: auto; }
+  body { background: #fff; font-size: 10.5pt; line-height: 1.5; }
+  .layout { display: block; padding: 0; }
+  nav.toc { position: static; max-height: none; overflow: visible; margin: 0 0 14pt; padding: 10pt 12pt; border: 1px solid var(--line); border-radius: 8px; }
+  .toc-title { display: block; }
+  nav.toc ol { display: block; columns: 2; column-gap: 18pt; }
+  nav.toc a { padding: 1pt 0; border: 0; background: none; color: var(--ink); }
+  h1 { font-size: 30pt; }
+  h2 { font-size: 18pt; margin-top: 26pt; break-after: avoid; page-break-after: avoid; }
+  h3, h4 { break-after: avoid; page-break-after: avoid; }
+  .lede, .closing { font-size: 12.5pt; }
+  .table-wrap, .diagram-wrap { overflow: visible; }
+  table { font-size: 8.8pt; }
+  table.flow { min-width: 0; font-size: 7.9pt; }
+  tr, pre, figure, .card, .note, .status, .layer, .three li, .steps > li { break-inside: avoid; page-break-inside: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 8.6pt; }
+  svg.diagram { min-width: 0; }
+  a { color: inherit; text-decoration: none; }
+  .print-wide { page: wide; }
+  .print-break { break-before: page; page-break-before: always; }
+  footer.page-foot { margin-top: 24pt; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <p class="toc-title">Contents</p>
+  <ol>
+    <li><a href="#pitch">AgentCart in brief</a></li>
+    <li><a href="#problem">The problem</a></li>
+    <li><a href="#benefits">Who benefits</a></li>
+    <li><a href="#safr">The SAFR mapping</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#setup">Setup</a></li>
+    <li><a href="#identities">Demo identities</a></li>
+    <li><a href="#demo-flow">Demo flow</a></li>
+    <li><a href="#reset">Reset between takes</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#recording">Recording checklist</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============================== 1. Title and pitch ============================== -->
+<header id="pitch">
+  <p class="eyebrow">Demo runbook and problem statement</p>
+  <h1>AgentCart</h1>
+  <p class="lede">AgentCart is an AI purchasing agent that cannot spend until a SAFR gateway verifies its identity, checks its mandate, and logs the decision. The agent browses a small catalog and gets real merchant quotes through Reap's Agentic Payments sandbox, but none of its tools can pay. Its only route to money is to propose a purchase to the gateway, which rebuilds the request from server data, signs it, checks it against the spending limits the user set, writes the decision to a hash-chained log, and only then asks Reap for a checkout.</p>
+  <p>Built for the Reap × 65labs Agentic Buildathon, 9 Oct 2026, Singapore, in the track "Most Worthwhile Problem".</p>
+  <p class="closing">Every agent can decide; ours can't spend until its authority is verified, its limits checked, and the decision logged.</p>
+
+  <div class="status-grid" aria-label="Build status">
+    <div class="status ok">
+      <h4><span class="tag tag-ok">Built and tested</span></h4>
+      <ul>
+        <li>SAFR gate: identity, controls, disposition, audit log.</li>
+        <li>Reap adapter: quotes, checkouts, card enrollment, cents conversion.</li>
+        <li>Agent with three tools and the two-pane app with approvals, pause and tamper demo.</li>
+        <li><code>npm test</code>: 66 tests in 6 files pass.</li>
+      </ul>
+    </div>
+    <div class="status todo">
+      <h4><span class="tag tag-todo">Not yet built</span></h4>
+      <ul>
+        <li>A kill switch control in the app. The gate enforces <code>KILL_SWITCH</code>, but the flag can only be set from the terminal (<code>POST /api/mandate</code>), and the panel does not display it.</li>
+      </ul>
+    </div>
+    <div class="status verify">
+      <h4><span class="tag tag-verify">Not yet verified</span></h4>
+      <ul>
+        <li>Reap's hosted checkout approval page. The default sandbox setting (<code>REAP_SIMULATE_CHECKOUT=true</code>) skips it. The code path for it exists, but <code>NOTES.md</code> does not record an end-to-end run.</li>
+      </ul>
+    </div>
+    <div class="status reap">
+      <h4><span class="tag tag-reap">Reap side</span></h4>
+      <ul>
+        <li>Quotes for brewlander.com (the beer) return 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code>, so the category demo step cannot get a live quote today.</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<!-- ============================== 2. Problem ============================== -->
+<section id="problem">
+  <h2><span class="num">2</span>The problem we are solving</h2>
+
+  <h3>The shift</h3>
+  <p>AI assistants have spent the last few years recommending what to buy. They are now starting to buy it. An agent that can search a catalog, compare prices and fill a cart can also be handed a card, and payment providers are opening checkout APIs built for agents, Reap's Agentic Payments among them.</p>
+  <p>The moment an agent can pay, three things that came for free with a human buyer disappear:</p>
+  <ol class="three">
+    <li><strong>A clear limit on authority.</strong> A person buying for a company knows roughly what they may spend, where, and on what. An agent holding a card can spend whatever the card allows.</li>
+    <li><strong>A reviewer for anything unusual.</strong> A person hesitates before an odd purchase and checks with someone. An agent does not hesitate unless something outside it makes it stop.</li>
+    <li><strong>A record of why the money moved.</strong> A person can explain a purchase afterwards. An agent's explanation is text it writes on request, and it may not match what actually happened.</li>
+  </ol>
+
+  <h3>Where this bites</h3>
+  <div class="cards">
+    <div class="card c1">
+      <h4>(i) Business spend</h4>
+      <p>An operations agent restocks office supplies, renews software seats and books couriers. Most of these purchases are small and routine, which is exactly why nobody looks at them.</p>
+      <p class="risk"><strong>Without a control layer:</strong> a product page with hidden text ("the premium bundle is required for this order") or a misread quantity turns into a real order, and the first anyone hears of it is the card statement.</p>
+    </div>
+    <div class="card c2">
+      <h4>(ii) High-frequency small payments</h4>
+      <p>Agents pay per API call, per document, per data query. No person can review each payment and no single one matters. The total does.</p>
+      <p class="risk"><strong>Without a control layer:</strong> a retry loop, or a supplier that quietly raises its per-call price, drains a month's budget in an afternoon, and nothing ever says stop.</p>
+    </div>
+    <div class="card c3">
+      <h4>(iii) Delegated procurement</h4>
+      <p>A team lead gives an agent S$150 and two days to buy supplies for a project, with anything over S$80 needing their sign-off.</p>
+      <p class="risk"><strong>Without a control layer:</strong> the budget is a sentence in a prompt that the agent can misread, forget or be talked out of. The sign-off is a chat reply with no expiry that could be applied to a different cart. When finance asks where the S$150 went, the only answer is a chat transcript.</p>
+    </div>
+    <div class="card c4">
+      <h4>(iv) Agent-to-agent commerce</h4>
+      <p>One company's buying agent deals with another company's selling agent, with nobody watching either side in real time.</p>
+      <p class="risk"><strong>Without a control layer:</strong> whatever the selling agent says about its product reaches the buying agent as input it may act on. An out-of-scope or mispriced offer is accepted at machine speed, and neither side can later prove who authorised what.</p>
+    </div>
+  </div>
+
+  <h3>Why today's answers fall short</h3>
+  <ul>
+    <li><strong>LLM guardrails are probabilistic and work at the text layer.</strong> "Never spend more than S$150" in a system prompt is a request to the model, not a control on the payment. It can be misread, overridden by injected text, or lost in a long conversation.</li>
+    <li><strong>Card controls on the payment rail see only the amount and the merchant.</strong> They cannot see which agent is asking, for whom, under what mandate, or why. An S$85 luggage tag looks the same to the card whether a person chose it or a manipulated agent did.</li>
+    <li><strong>Ad hoc "ask the user" prompts are not a control.</strong> They have no timeout, so a stale yes can be acted on hours later. They leave no record outside the chat. And they are not bound to the exact transaction, so a yes given for one cart can be used for another.</li>
+  </ul>
+
+  <h3>What "controlled environment" means here</h3>
+  <p>AgentCart is a safe place to prove the pattern before any real money is involved:</p>
+  <ul>
+    <li><strong>Sandbox only.</strong> Every quote and checkout goes to Reap's sandbox (<code>https://sg.sandbox.api.reap.global</code>) and is paid with Reap's test cards. No real money moves.</li>
+    <li><strong>The mandate lives in the application.</strong> Budget, auto-approve limit, currency, categories, dates and kill switch are stored on the server and read fresh for every decision. The model is shown them but has no way to change them. Reap's own mandates are not live in the sandbox, so this layer is ours.</li>
+    <li><strong>Deterministic rules the model cannot alter.</strong> The decision is made by ordinary code with no AI in it. The same request against the same limits always gets the same answer.</li>
+    <li><strong>A tamper-evident log.</strong> Every decision, refusals included, is written to a hash-chained log before Reap is asked to charge anything. Editing any saved record afterwards breaks the chain, and the app shows it.</li>
+  </ul>
+</section>
+
+<!-- ============================== 3. Benefits ============================== -->
+<section id="benefits">
+  <h2><span class="num">3</span>Who benefits and how</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th style="width:26%">Stakeholder</th><th>What they get</th></tr></thead>
+      <tbody>
+        <tr><th>Finance and operations teams</th><td>Bounded delegation: a hard cap (S$150 in the demo) and an auto-approve threshold (S$80) that the agent cannot exceed or edit. Every decision comes with one plain sentence, for example "{amount} is above the S$80.00 auto-approve limit, so a human must approve it."</td></tr>
+        <tr><th>Compliance and risk</th><td>A hash-chained audit log that reconstructs any decision from the signed purchase record, the rules that fired and the reason, without trusting the agent's own account. Identity is bound to an Ed25519 signature checked against a registered public key, not to an ID string anyone can type.</td></tr>
+        <tr><th>The person delegating</th><td>One place to set budget, currency, categories and dates ("Edit spending limits") and one switch to stop the agent ("Pause assistant"). Escalations expire after 5 minutes if ignored, and the money held for them is released.</td></tr>
+        <tr><th>Payment providers such as Reap</th><td>A checkout request arrives only after the agent's authority has been verified, carries an idempotency key equal to the signed record's hash, and can be traced back to a structured intent record. That lowers dispute and fraud risk.</td></tr>
+        <tr><th>Developers building agents</th><td>A drop-in gate with a one-function interface, <code>proposeCheckout({ quoteId, reason, sessionId })</code>. The agent never handles amounts, cards or checkouts, so its code stays simple.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>From hackathon demo to institution.</strong> The same four components and the same four outcomes carry over; what changes is configuration, not architecture. Thresholds, categories and merchant lists (<code>allowedMerchants</code> is already supported) differ per use case, reviewers become authenticated roles, and the audit log moves to storage the operator cannot quietly rewrite. New agents integrate natively by calling <code>proposeCheckout</code>, as AgentCart does; existing agents can sit behind the same checkpoint as a gateway that intercepts their payment calls. Either way, the payment rail only ever sees a request after the gate has said yes.</p>
+</section>
+
+<!-- ============================== 4. SAFR ============================== -->
+<section id="safr">
+  <h2><span class="num">4</span>How this implements the SAFR framework</h2>
+  <p>We built against the Monetary Authority of Singapore white paper <strong>"Safeguards for Agentic Finance at Runtime" (SAFR), version 1.0, July 2026</strong>, as our reference approach. It is a white paper, not regulatory guidance, and nothing in this document claims compliance with it. Where we describe what the paper asks for, that is our paraphrase, not a quotation.</p>
+
+  <h3>SAFR in one paragraph</h3>
+  <p>SAFR places a runtime governance checkpoint between every agent decision and its execution. The checkpoint has four components: <strong>Agent Identity</strong> (who is acting, and whether they may act at all), a <strong>Controls Repository</strong> (the authority the principal has delegated), a <strong>Disposition Engine</strong> (which applies those controls) and an <strong>Audit Log</strong> (which records what was decided and why). The components operate on a <strong>Governance Envelope</strong>, a structured record of the proposed action, its action trace and its context, and produce one of four outcomes: <span class="badge b-deny">Deny</span> <span class="badge b-esc">Escalate</span> <span class="badge b-auto">Auto-Execute</span> <span class="badge b-obs">Observe</span>.</p>
+
+  <h3>Concept by concept</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:15%">SAFR concept</th><th style="width:24%">What the paper asks for (our reading)</th><th style="width:34%">Where it lives in our code</th><th>How the demo shows it</th></tr></thead>
+      <tbody>
+        <tr>
+          <th>Governance Envelope</th>
+          <td>A structured record of the proposed action, its action trace and context metadata, filled by the checkpoint rather than the agent, and protected against change.</td>
+          <td><code>lib/safr/envelope.ts</code>: <code>buildEnvelope</code> fills every field from the quote, catalog, mandate and registry; <code>hashEnvelope</code> (SHA-256 of canonical JSON); <code>signEnvelope</code> (Ed25519 over the hash). Type <code>Envelope</code> in <code>lib/types.ts</code>. The agent supplies only <code>quoteId</code> and <code>reason</code>.</td>
+          <td>Panel section "03 · Purchase details": the latest record with a "Signed by the assistant" badge; "Technical details" shows the full JSON including <code>context.toolTrace</code>.</td>
+        </tr>
+        <tr>
+          <th>Agent Identity</th>
+          <td>Verify the agent before any other evaluation: registered, active, authentic, allowed this tool and action type, acting for this principal. An identity failure is rejected before Controls are consulted.</td>
+          <td><code>lib/safr/registry.ts</code> (<code>getAgent</code>, <code>setAgentStatus</code>, <code>registerPublicKey</code>, <code>authorizeToolCall</code> for the tool allowlist); <code>verifyEnvelope</code> in <code>envelope.ts</code>; <code>checkIdentity</code> in <code>disposition.ts</code>. In <code>gate.ts</code>, <code>decide()</code> returns on an identity failure before the budget and velocity queries run or <code>dispose()</code> is called. (The mandate is loaded earlier, only to fill the envelope.)</td>
+          <td>Step 8: "Pause assistant" then any purchase gives <span class="badge b-deny">DENY</span> <code>IDENTITY_REVOKED</code>. "Assistant details" shows agent ID, owner, AI model, instructions ID (prompt hash) and signing key fingerprint.</td>
+        </tr>
+        <tr>
+          <th>Controls Repository</th>
+          <td>The principal's delegated authority as bounded capability: permitted action types, decision logic, escalation conditions, validity period, principal authority, and a kill switch.</td>
+          <td><code>lib/safr/controls.ts</code>: <code>loadMandate</code>, <code>saveMandate</code> (validates, bumps version), budget holds (<code>reserve</code>, <code>settle</code>, <code>releaseReservation</code>, <code>remainingBudget</code>), <code>recentPurchaseCount</code>. Type <code>Mandate</code> in <code>lib/types.ts</code>; seed <code>lib/mandate.demo.json</code>. Permitted action types and principal authority are on the registry record (<code>allowed_action_types</code>, <code>principals</code>).</td>
+          <td>Step 0: "Edit spending limits". Section "02 · Spending limits" shows Budget left, Ask me above, Total budget, Currency, categories and dates. <span class="tag tag-todo">Not yet built</span> the kill switch has no control or display in the app (step 7 uses the terminal).</td>
+        </tr>
+        <tr>
+          <th>Disposition Engine</th>
+          <td>Deterministic, ordered evaluation that produces the outcome. The model does not decide.</td>
+          <td><code>lib/safr/disposition.ts</code>: <code>dispose()</code> is a pure function with no I/O and no LLM. Ordered checks; the first Deny wins; non-blocking rules accumulate and the strongest sets the outcome. Full order in <a href="#rules">5d</a>.</td>
+          <td>Every step: the badge and the reason sentence come from here; the agent only relays them.</td>
+        </tr>
+        <tr>
+          <th>Audit Log</th>
+          <td>Append-only and tamper-evident; written before execution; includes rejected actions; independent of the agent's own narrative.</td>
+          <td><code>lib/safr/audit.ts</code>: <code>append</code> (row hash = SHA-256 of previous hash plus canonical <code>{ seq, ts, envelope, disposition }</code>), <code>verifyChain</code>, <code>markExecuted</code>. <code>gate.ts</code> appends before any checkout call. Table <code>audit</code> in <code>data/safr.db</code>.</td>
+          <td>"05 · Activity" lists every decision, Deny included, under a "Records match" badge. Step 9: "Tamper with a record" turns it into "A record was changed".</td>
+        </tr>
+        <tr>
+          <th>Four outcomes</th>
+          <td>Deny, Escalate, Auto-Execute, Observe.</td>
+          <td><code>Decision</code> in <code>lib/types.ts</code>: <code>DENY</code>, <code>ESCALATE</code>, <code>AUTO_EXECUTE</code>, <code>OBSERVE</code>. App labels: "Not allowed", "Needs your approval", "Allowed", "Already checked".</td>
+          <td>Steps 1 (Auto-Execute), 2 (Escalate), 3 to 5 and 7 to 8 (Deny), 6 (Observe).</td>
+        </tr>
+        <tr>
+          <th>Multi-step independence</th>
+          <td>No authority carries over from one action to the next.</td>
+          <td>Every <code>proposeCheckout</code> re-reads the quote from Reap, reloads the mandate, rebuilds and re-signs the envelope and runs every rule again. An approval can be claimed once (<code>claim()</code> only moves <code>PENDING</code> forward once), and approving re-runs every rule.</td>
+          <td>Step 6: the same book again is judged fresh and flagged <code>VELOCITY</code>. Test: "approval re-checks every rule: revoked in the meantime → DENY and release".</td>
+        </tr>
+        <tr>
+          <th>Human reviewer: timeout</th>
+          <td>A human review step needs a bounded window.</td>
+          <td><code>APPROVAL_WINDOW_MS</code> = 5 minutes in <code>gate.ts</code>; <code>expireStaleApprovals</code> logs <span class="badge b-deny">DENY</span> <code>APPROVAL_TIMEOUT</code> and releases the budget hold.</td>
+          <td>Step 2: the Permission card counts down from 5:00.</td>
+        </tr>
+        <tr>
+          <th>Human reviewer: authority</th>
+          <td>The reviewer's answer must apply to exactly what they reviewed, and be recorded.</td>
+          <td>The <code>approvals</code> table is keyed by envelope hash. <code>approve()</code> takes what to buy from the audit log, never from the request. A refreshed quote with a different merchant, items or currency, or a higher amount, is denied <code>QUOTE_CHANGED</code>. The reviewer's name is stored ("You" from the app).</td>
+          <td>Step 2: Approve gives <span class="badge b-auto">AUTO_EXECUTE</span> with rules <code>OVER_AUTO_THRESHOLD</code>, <code>HUMAN_APPROVED</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Integration pattern</h3>
+  <p>AgentCart uses SAFR's <strong>native integration</strong> pattern: the agent itself is instrumented to emit a proposal through <code>proposeCheckout</code>, and the gate builds the envelope from it. The alternative, the <strong>gateway</strong> pattern, suits existing agents that already call a payment API: the checkpoint sits in the network path and intercepts those calls instead. Same four components, different insertion point. In AgentCart there is also no public route that creates a checkout (<code>app/api/checkout/route.ts</code> exports <code>GET</code> only), so the gate is the only path to Reap's checkout either way.</p>
+
+  <h3>Where SAFR sits in the stack</h3>
+  <div class="stack" aria-label="Control layers">
+    <div class="layer l1">
+      <h4>Above: LLM guardrails</h4>
+      <p>The system prompt (<code>lib/agent/system-prompt.ts</code>) and a three-tool allowlist checked by the registry on every tool call. They shape what the agent tries. Helpful, but probabilistic.</p>
+    </div>
+    <div class="joint">proposeCheckout({ quoteId, reason }) is the only way down</div>
+    <div class="layer l2">
+      <h4>Middle: the SAFR gate</h4>
+      <p>Identity, mandate, ordered rules and a hash-chained log. Deterministic. It decides whether the agent may ask Reap for a checkout at all.</p>
+    </div>
+    <div class="joint">POST /agentic/checkouts only after Allowed, Already checked, or a human Approve</div>
+    <div class="layer l3">
+      <h4>Below: Reap</h4>
+      <p>Hosted cardholder approval and sandbox settlement. The cardholder consents to this specific charge on Reap's own page; AgentCart never sees card details.</p>
+    </div>
+  </div>
+  <p><strong>SAFR decides whether the agent may ask; Reap's page is where the cardholder consents.</strong> They are two different controls and the design keeps both.</p>
+  <div class="note warn">
+    <p><span class="tag tag-verify">Not yet verified</span> In the default sandbox setup the adapter sends <code>X-Simulate-Checkout: COMPLETED</code> (<code>REAP_SIMULATE_CHECKOUT</code> defaults to <code>true</code>, and the header is only sent when the base URL contains "sandbox" and <code>NODE_ENV</code> is not <code>production</code>). That skips Reap's hosted approval page, so checkouts complete straight away. Set <code>REAP_SIMULATE_CHECKOUT=false</code> to show the hosted page: the app then shows a "Review on Reap" button and Reap returns to <code>/orders/done?envelopeHash=…</code>. That path is built but <code>NOTES.md</code> does not record an end-to-end run, so rehearse it before relying on it on camera.</p>
+  </div>
+
+  <h3>What we deliberately did not implement</h3>
+  <p>Being clear about the edges is part of the design:</p>
+  <ul>
+    <li><strong>Open-network identity resolution.</strong> The agent is looked up by ID in our own SQLite registry. There is no discovery of agents run by other organisations and no certificate chain to an outside authority.</li>
+    <li><strong>Multiple registries.</strong> One registry, one agent (<code>purchasing-agent-v1</code>), one principal (<code>demo-user-001</code>).</li>
+    <li><strong>Evidence-quality controls.</strong> The agent's stated reason is stored as data (trimmed to 500 characters) and never parsed or scored.</li>
+    <li><strong>Rate limits beyond a simple velocity rule.</strong> <code>VELOCITY</code> flags any repeat purchase from the same merchant within 5 minutes. There are no hourly caps and no anomaly models.</li>
+    <li><strong>Reviewer authentication.</strong> <code>POST /api/approvals</code> accepts any reviewer name of 1 to 100 characters; the app sends "You". No route has user authentication; the chat, state and tamper routes check the request comes from the same origin.</li>
+    <li><strong>Independent key custody.</strong> The private key (<code>AGENT_PRIVATE_KEY</code>) is held by the same server that verifies it. The signature proves the record was not altered after sealing and binds it to the registered key; it does not prove a separate agent runtime produced it.</li>
+    <li><strong>An external anchor for the log.</strong> The chain lives in the same SQLite file the app writes, so it is tamper-evident, not tamper-proof: someone with the file could rebuild the whole chain. Publishing the latest hash somewhere else is the next step.</li>
+  </ul>
+</section>
+
+<!-- ============================== 5. Architecture ============================== -->
+<section id="architecture" class="runbook">
+  <h2><span class="num">5</span>Architecture</h2>
+
+  <h3>5a. The flow</h3>
+  <figure>
+    <div class="diagram-wrap">
+      <svg class="diagram" viewBox="0 0 880 676" role="img" aria-labelledby="arch-title arch-desc">
+        <title id="arch-title">AgentCart architecture</title>
+        <desc id="arch-desc">The principal sets a mandate. The purchasing agent gets a price from Reap and proposes a purchase to the SAFR gateway, which builds and signs an envelope, checks identity, checks controls, decides and logs. Deny stops before Reap. Escalate waits for a human; an approval is re-checked and joins Auto-execute. Auto-execute and Observe create a Reap sandbox checkout, which may show a hosted approval page, and end when Reap reports COMPLETED.</desc>
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#5d6273"/>
+          </marker>
+        </defs>
+
+        <!-- Row A -->
+        <rect x="20" y="20" width="250" height="100" rx="12" fill="#fff6d3" stroke="#ead27f"/>
+        <text class="dg-t" x="36" y="46">You, the principal</text>
+        <text class="dg-s" x="36" y="68">Set the mandate in Edit spending</text>
+        <text class="dg-s" x="36" y="85">limits: budget, auto-approve limit,</text>
+        <text class="dg-s" x="36" y="102">currency, categories, dates.</text>
+
+        <path class="edge" d="M270,70 H326" marker-end="url(#ah)"/>
+        <text class="dg-l" x="298" y="62" text-anchor="middle">chat</text>
+
+        <rect x="330" y="20" width="270" height="100" rx="12" fill="#eeeaff" stroke="#d2c9fb"/>
+        <text class="dg-t" x="346" y="46">Purchasing agent (LLM)</text>
+        <text class="dg-s" x="346" y="68">Three tools: listCatalog, getQuote,</text>
+        <text class="dg-s" x="346" y="85">proposeCheckout. No payment tool.</text>
+        <text class="dg-s" x="346" y="102">Product text is treated as data.</text>
+
+        <path class="edge" d="M600,70 H646" marker-end="url(#ah)"/>
+        <text class="dg-l" x="623" y="62" text-anchor="middle">price</text>
+
+        <rect x="650" y="20" width="210" height="100" rx="12" fill="#e5f0fc" stroke="#b9d3f3"/>
+        <text class="dg-t" x="666" y="46">Reap quote</text>
+        <text class="dg-m" x="666" y="68">POST /agentic/quotes</text>
+        <text class="dg-s" x="666" y="87">Price only. Cannot spend.</text>
+
+        <!-- connectors into the gateway -->
+        <path class="edge dash" d="M145,120 V138 H337 V156" marker-end="url(#ah)"/>
+        <text class="dg-l" x="327" y="152" text-anchor="end">mandate, stored server side</text>
+        <path class="edge" d="M465,120 V156" marker-end="url(#ah)"/>
+        <text class="dg-l" x="473" y="146">proposeCheckout(quoteId, reason)</text>
+        <path class="edge dash" d="M755,160 V124" marker-end="url(#ah)"/>
+        <text class="dg-l" x="763" y="146">re-reads quote</text>
+
+        <!-- Row B: gateway -->
+        <rect x="20" y="160" width="840" height="170" rx="14" fill="#e2f5ec" stroke="#a9dcc4"/>
+        <text class="dg-t" x="36" y="184">SAFR gateway</text>
+        <text class="dg-m" x="134" y="184">lib/safr/gate.ts, the only code that creates a Reap checkout</text>
+        <rect x="36" y="196" width="808" height="30" rx="8" fill="#ffffff" stroke="#a9dcc4" stroke-dasharray="4 3"/>
+        <text class="dg-s" x="440" y="215" text-anchor="middle">Governance Envelope: built from Reap's quote, the catalog, the mandate and the registry, hashed (SHA-256) and signed (Ed25519)</text>
+
+        <rect x="36" y="242" width="190" height="72" rx="10" fill="#ffffff" stroke="#a9dcc4"/>
+        <text class="dg-t" x="50" y="264">1 Agent Identity</text>
+        <text class="dg-m" x="50" y="282">registry.ts</text>
+        <text class="dg-s" x="50" y="300">Checked before controls</text>
+
+        <rect x="242" y="242" width="190" height="72" rx="10" fill="#ffffff" stroke="#a9dcc4"/>
+        <text class="dg-t" x="256" y="264">2 Controls Repository</text>
+        <text class="dg-m" x="256" y="282">controls.ts</text>
+        <text class="dg-s" x="256" y="300">Mandate and budget holds</text>
+
+        <rect x="448" y="242" width="190" height="72" rx="10" fill="#ffffff" stroke="#a9dcc4"/>
+        <text class="dg-t" x="462" y="264">3 Disposition Engine</text>
+        <text class="dg-m" x="462" y="282">disposition.ts</text>
+        <text class="dg-s" x="462" y="300">Ordered rules, no LLM</text>
+
+        <rect x="654" y="242" width="190" height="72" rx="10" fill="#ffffff" stroke="#a9dcc4"/>
+        <text class="dg-t" x="668" y="264">4 Audit Log</text>
+        <text class="dg-m" x="668" y="282">audit.ts</text>
+        <text class="dg-s" x="668" y="300">Chained, written first</text>
+
+        <path class="edge" d="M226,278 H240" marker-end="url(#ah)"/>
+        <path class="edge" d="M432,278 H446" marker-end="url(#ah)"/>
+        <path class="edge" d="M638,278 H652" marker-end="url(#ah)"/>
+
+        <!-- Row C: outcomes -->
+        <path class="edge" d="M120,330 V370" marker-end="url(#ah)"/>
+        <path class="edge" d="M320,330 V370" marker-end="url(#ah)"/>
+        <path class="edge" d="M540,330 V370" marker-end="url(#ah)"/>
+        <path class="edge" d="M760,330 V370" marker-end="url(#ah)"/>
+        <text class="dg-l" x="430" y="355" text-anchor="middle">one outcome per proposal</text>
+
+        <rect x="40" y="372" width="160" height="44" rx="10" fill="#fde8ea" stroke="#f2b8c0"/>
+        <text class="dg-t" x="120" y="390" text-anchor="middle">Deny</text>
+        <text class="dg-s" x="120" y="407" text-anchor="middle">first failing rule wins</text>
+
+        <rect x="240" y="372" width="160" height="44" rx="10" fill="#fff0e2" stroke="#f3c99d"/>
+        <text class="dg-t" x="320" y="390" text-anchor="middle">Escalate</text>
+        <text class="dg-s" x="320" y="407" text-anchor="middle">over the S$80 limit</text>
+
+        <rect x="460" y="372" width="160" height="44" rx="10" fill="#e2f5ec" stroke="#a9dcc4"/>
+        <text class="dg-t" x="540" y="390" text-anchor="middle">Auto-execute</text>
+        <text class="dg-s" x="540" y="407" text-anchor="middle">within every limit</text>
+
+        <rect x="680" y="372" width="160" height="44" rx="10" fill="#e5f0fc" stroke="#b9d3f3"/>
+        <text class="dg-t" x="760" y="390" text-anchor="middle">Observe</text>
+        <text class="dg-s" x="760" y="407" text-anchor="middle">repeat within 5 minutes</text>
+
+        <!-- Row D -->
+        <path class="edge" d="M120,416 V438" marker-end="url(#ah)"/>
+        <rect x="40" y="440" width="160" height="64" rx="10" fill="#ffffff" stroke="#b42c3d" stroke-dasharray="5 4"/>
+        <text class="dg-t" x="120" y="464" text-anchor="middle">Logged, then stopped</text>
+        <text class="dg-s" x="120" y="484" text-anchor="middle">Reap is never called</text>
+
+        <path class="edge" d="M320,416 V438" marker-end="url(#ah)"/>
+        <rect x="240" y="440" width="160" height="64" rx="10" fill="#ffffff" stroke="#a3560b"/>
+        <text class="dg-t" x="320" y="462" text-anchor="middle">Human approval</text>
+        <text class="dg-s" x="320" y="480" text-anchor="middle">Permission card, 5 minutes</text>
+        <text class="dg-s" x="320" y="496" text-anchor="middle">bound to the envelope hash</text>
+        <path class="edge" d="M400,472 H430 V394 H458" marker-end="url(#ah)"/>
+        <text class="dg-l" x="240" y="522">Approve: re-checked, joins Auto-execute.</text>
+        <text class="dg-l" x="240" y="538">Decline or 5 minute timeout: Deny.</text>
+
+        <text class="dg-l" x="768" y="470">flagged, still runs</text>
+        <path class="edge" d="M540,416 V556"/>
+        <path class="edge" d="M760,416 V556 H350 V588" marker-end="url(#ah)"/>
+
+        <!-- Reap band -->
+        <rect x="20" y="576" width="840" height="86" rx="14" fill="#e5f0fc" stroke="#b9d3f3"/>
+        <text class="dg-t" x="36" y="602">Reap sandbox</text>
+        <text class="dg-m" x="36" y="620">lib/reap</text>
+        <text class="dg-s" x="36" y="638">test cards only</text>
+
+        <rect x="250" y="590" width="200" height="58" rx="10" fill="#ffffff" stroke="#b9d3f3"/>
+        <text class="dg-t" x="350" y="613" text-anchor="middle">Create checkout</text>
+        <text class="dg-m" x="350" y="632" text-anchor="middle">POST /agentic/checkouts</text>
+
+        <path class="edge" d="M450,619 H478" marker-end="url(#ah)"/>
+        <rect x="480" y="590" width="170" height="58" rx="10" fill="#ffffff" stroke="#b9d3f3" stroke-dasharray="5 4"/>
+        <text class="dg-t" x="565" y="613" text-anchor="middle">Hosted approval</text>
+        <text class="dg-s" x="565" y="632" text-anchor="middle">skipped when simulated</text>
+
+        <path class="edge" d="M650,619 H678" marker-end="url(#ah)"/>
+        <rect x="680" y="590" width="165" height="58" rx="10" fill="#ffffff" stroke="#17795c"/>
+        <text class="dg-t" x="762" y="613" text-anchor="middle">COMPLETED</text>
+        <text class="dg-s" x="762" y="632" text-anchor="middle">orderId, hold settled</text>
+      </svg>
+    </div>
+    <figcaption>Deny is logged and never reaches Reap. Escalate holds the money and waits for a human; an approval is re-checked and continues as Auto-execute. Nothing counts as ordered until <code>GET /agentic/checkouts/:id</code> returns <code>COMPLETED</code>.</figcaption>
+  </figure>
+
+  <h3>5b. The SAFR components, file by file</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:26%">File</th><th style="width:20%">Role</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>lib/safr/registry.ts</code></td><td>Agent Identity</td><td>The agent record: ID, display name, owner, model, prompt hash, allowed tools, allowed action types, principals, public key, status (<code>ACTIVE</code> or <code>REVOKED</code>). <code>authorizeToolCall</code> checks the tool allowlist and logs every call; <code>toolTraceFor</code> turns that log into the envelope's tool trace.</td></tr>
+        <tr><td><code>lib/safr/controls.ts</code></td><td>Controls Repository</td><td>Mandate load and save (zod validation, version bump on every save); budget holds (<code>reserve</code>, <code>settle</code>, <code>releaseReservation</code>); <code>remainingBudget</code> = total budget minus reserved minus settled; <code>recentPurchaseCount</code> for the 5-minute velocity window.</td></tr>
+        <tr><td><code>lib/safr/disposition.ts</code></td><td>Disposition Engine</td><td><code>checkIdentity</code> and <code>dispose</code>: pure functions, ordered rules, first Deny wins, one plain-sentence reason per decision.</td></tr>
+        <tr><td><code>lib/safr/audit.ts</code></td><td>Audit Log</td><td><code>append</code>, <code>verifyChain</code>, <code>markExecuted</code> (execution status sits outside the hash, so recording it never breaks the chain), <code>tamperForDemo</code> (dev only).</td></tr>
+        <tr><td><code>lib/safr/envelope.ts</code></td><td>Governance Envelope</td><td><code>canonicalize</code>, <code>hashEnvelope</code>, <code>buildEnvelope</code>, <code>signEnvelope</code>, <code>verifyEnvelope</code>, <code>generateAgentKeyPair</code>, <code>publicKeyFromPrivate</code>.</td></tr>
+        <tr><td><code>lib/safr/gate.ts</code></td><td>The checkpoint</td><td><code>proposeCheckout</code>, <code>approve</code>, <code>decline</code>, <code>expireStaleApprovals</code>, <code>listPendingApprovals</code>, <code>recordCheckoutOutcome</code>, <code>checkoutIdForEnvelope</code>, <code>assertExecutable</code>, <code>simulatedCheckout</code>. The only code that calls <code>createCheckout</code>.</td></tr>
+        <tr><td><code>lib/safr/db.ts</code></td><td>Storage</td><td>One SQLite file, <code>data/safr.db</code> (WAL mode, gitignored), with tables <code>agents</code>, <code>mandates</code>, <code>reservations</code>, <code>audit</code>, <code>approvals</code>, <code>reap_quotes</code>, <code>reap_enrollments</code>, <code>tool_calls</code>. Seeds the agent and the demo mandate on first open.</td></tr>
+        <tr><td><code>lib/safr/reap-adapter.ts</code></td><td>Door to Reap</td><td>Re-exports the <code>reapAdapter</code> from <code>lib/reap/</code>. <code>lib/safr/mock-reap.ts</code> is the in-memory stand-in used by the tests.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>5c. The Governance Envelope</h3>
+  <p>The real type from <code>lib/types.ts</code>:</p>
+<pre><code>export type Envelope = {
+  envelopeId: string;
+  schemaVersion: "1.0";
+  agent: { agentId: string; model: string; promptHash: string };
+  principalId: string;
+  sessionId: string;
+  action: {
+    type: "CREATE_CHECKOUT";
+    quoteId: string;
+    merchantDomain: string;
+    category: string;
+    items: { sku: string; quantity: number }[];
+    amount: Money;
+  };
+  context: {
+    mandateId: string;
+    mandateVersion: number;
+    quoteExpiresAt: string;
+    toolTrace: string[];
+    agentReason: string;
+  };
+  hash: string; // sha256 of canonical form (excluding hash + signature)
+  signature: string; // Ed25519 over hash, base64
+};</code></pre>
+  <p><strong>The agent supplies two fields: <code>quoteId</code> and <code>reason</code>.</strong> Everything else is filled on the server:</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:32%">Field</th><th>Filled from</th></tr></thead>
+      <tbody>
+        <tr><td><code>action.quoteId</code></td><td><strong>Agent.</strong> Checked by re-reading the quote from Reap (<code>GET /agentic/quotes/:id</code>); a quote this app did not create is refused.</td></tr>
+        <tr><td><code>context.agentReason</code></td><td><strong>Agent.</strong> Free text, cut to 500 characters, stored as data, never parsed.</td></tr>
+        <tr><td><code>envelopeId</code>, <code>schemaVersion</code>, <code>action.type</code></td><td>Server: a random UUID, <code>"1.0"</code>, <code>"CREATE_CHECKOUT"</code>.</td></tr>
+        <tr><td><code>agent.agentId</code>, <code>agent.model</code>, <code>agent.promptHash</code></td><td><code>AGENT_ID</code> and the registry record.</td></tr>
+        <tr><td><code>principalId</code>, <code>context.mandateId</code>, <code>context.mandateVersion</code></td><td>The stored mandate.</td></tr>
+        <tr><td><code>sessionId</code></td><td>The <code>agentcart_session</code> cookie, passed by the tool code, not the model.</td></tr>
+        <tr><td><code>action.amount</code>, <code>context.quoteExpiresAt</code></td><td>Reap's quote (<code>finalAmount</code>, including delivery and tax), converted to integer cents.</td></tr>
+        <tr><td><code>action.merchantDomain</code></td><td>Our own record of the quote (<code>reap_quotes</code>), because Reap's quote responses do not echo the merchant.</td></tr>
+        <tr><td><code>action.category</code>, <code>items[].sku</code></td><td><code>lib/catalog.json</code>, matched on merchant domain. An unknown merchant becomes category <code>"Uncatalogued"</code> and is denied on category.</td></tr>
+        <tr><td><code>items[].quantity</code></td><td>Quote subtotal divided by the catalog unit price (falls back to 1).</td></tr>
+        <tr><td><code>context.toolTrace</code></td><td>The allowed tool calls for this session from <code>tool_calls</code>, ending in <code>proposeCheckout</code>.</td></tr>
+        <tr><td><code>hash</code>, <code>signature</code></td><td>SHA-256 of the canonical JSON (keys sorted, without <code>hash</code> and <code>signature</code>); Ed25519 signature over that hash with <code>AGENT_PRIVATE_KEY</code>, base64.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="rules">5d. Disposition rules, in evaluation order</h3>
+  <p>From <code>lib/safr/disposition.ts</code>. The first Deny wins. Placeholders in braces are filled from the envelope and mandate; money is shown as <code>S$10.79</code> or <code>US$58.00</code>.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th class="nowrap">#</th><th>Rule ID</th><th>Outcome</th><th>Reason the user sees</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>IDENTITY_UNKNOWN_AGENT</code></td><td><span class="badge b-deny">DENY</span></td><td>Agent {agentId} is not in the registry, so it cannot spend.</td></tr>
+        <tr><td>2</td><td><code>IDENTITY_REVOKED</code></td><td><span class="badge b-deny">DENY</span></td><td>Agent {agentId} has been revoked, so it cannot spend.</td></tr>
+        <tr><td>3</td><td><code>IDENTITY_BAD_SIGNATURE</code></td><td><span class="badge b-deny">DENY</span></td><td>The request could not be verified as coming from this agent: {why}. (For example: unsigned, contents do not match the hash, or the signature does not match the registered public key.)</td></tr>
+        <tr><td>4</td><td><code>IDENTITY_ACTION_NOT_ALLOWED</code></td><td><span class="badge b-deny">DENY</span></td><td>Agent {agentId} is not allowed to {actionType}.</td></tr>
+        <tr><td>5</td><td><code>IDENTITY_PRINCIPAL_NOT_ALLOWED</code></td><td><span class="badge b-deny">DENY</span></td><td>Agent {agentId} does not act for {principalId}.</td></tr>
+        <tr><td>6</td><td><code>KILL_SWITCH</code></td><td><span class="badge b-deny">DENY</span></td><td>The mandate's kill switch is on, so all spending is paused.</td></tr>
+        <tr><td>7</td><td><code>MANDATE_EXPIRED</code></td><td><span class="badge b-deny">DENY</span></td><td>The spending mandate is not valid right now, so this purchase is blocked.</td></tr>
+        <tr><td>8</td><td><code>QUOTE_EXPIRED</code></td><td><span class="badge b-deny">DENY</span></td><td>The quote has expired; get a fresh quote and try again.</td></tr>
+        <tr><td>9</td><td><code>CURRENCY_MISMATCH</code></td><td><span class="badge b-deny">DENY</span></td><td>{merchant} prices in {currency}, but the mandate only allows {mandateCurrency}, so this purchase is blocked. (Checks both the quote's currency and the catalog's listed currency.)</td></tr>
+        <tr><td>10</td><td><code>CATEGORY_OUT_OF_SCOPE</code></td><td><span class="badge b-deny">DENY</span></td><td>{category} is outside this mandate (allowed: {categories}), so this purchase is blocked.</td></tr>
+        <tr><td>11</td><td><code>MERCHANT_NOT_ALLOWED</code></td><td><span class="badge b-deny">DENY</span></td><td>{merchant} is not on this mandate's merchant list, so this purchase is blocked. (Only when <code>allowedMerchants</code> is set; the demo mandate does not set it.)</td></tr>
+        <tr><td>12</td><td><code>OVER_HARD_CAP</code></td><td><span class="badge b-deny">DENY</span></td><td>{amount} is over the mandate's {totalBudget} total budget, so this purchase is blocked.</td></tr>
+        <tr><td>13</td><td><code>OVER_REMAINING_BUDGET</code></td><td><span class="badge b-deny">DENY</span></td><td>{amount} is more than the {left} left in this mandate's budget, so this purchase is blocked.</td></tr>
+        <tr><td>14</td><td><code>OVER_AUTO_THRESHOLD</code></td><td><span class="badge b-esc">ESCALATE</span></td><td>{amount} is above the {autoThreshold} auto-approve limit, so a human must approve it. (Strictly above; exactly at the limit auto-executes.)</td></tr>
+        <tr><td>15</td><td><code>VELOCITY</code></td><td><span class="badge b-obs">OBSERVE</span></td><td>{amount} is within the mandate, but it is a repeat purchase from {merchant} within 5 minutes, so it goes ahead flagged for review. (If 14 also fires, the outcome is Escalate with both rules.)</td></tr>
+        <tr><td></td><td>(none)</td><td><span class="badge b-auto">AUTO_EXECUTE</span></td><td>{amount} is within the mandate and under the {autoThreshold} auto-approve limit, so it goes ahead automatically.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Rules added by <code>lib/safr/gate.ts</code> around the engine:</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th>Rule ID</th><th>Outcome</th><th>When, and the reason</th></tr></thead>
+      <tbody>
+        <tr><td><code>HUMAN_APPROVED</code></td><td><span class="badge b-auto">AUTO_EXECUTE</span></td><td>A reviewer approves and every rule passes again: "Approved by {reviewer}: {amount} at {merchant}."</td></tr>
+        <tr><td><code>HUMAN_DECLINED</code></td><td><span class="badge b-deny">DENY</span></td><td>"Declined by {reviewer}, so nothing was bought and the budget hold was released."</td></tr>
+        <tr><td><code>APPROVAL_TIMEOUT</code></td><td><span class="badge b-deny">DENY</span></td><td>"No one approved this within 5 minutes, so it was cancelled and the budget hold released."</td></tr>
+        <tr><td><code>QUOTE_UNAVAILABLE</code></td><td><span class="badge b-deny">DENY</span></td><td>On approval the quote cannot be refreshed: "Approved by {reviewer}, but the quote could not be refreshed ({detail}), so nothing was bought."</td></tr>
+        <tr><td><code>QUOTE_CHANGED</code></td><td><span class="badge b-deny">DENY</span></td><td>On approval the refreshed quote changes merchant, items or currency, or costs more: "The refreshed quote is {new}, more than the {approved} that was approved, so nothing was bought. Propose it again."</td></tr>
+        <tr><td>(re-check)</td><td><span class="badge b-deny">DENY</span></td><td>An approval that now fails another rule: "Approved by {reviewer}, but blocked on re-check: {reason}"</td></tr>
+        <tr><td>(no envelope)</td><td><span class="badge b-deny">DENY</span></td><td>Malformed input ("The checkout request was malformed, so nothing was proposed.") or a quote Reap cannot return ("Quote {id} could not be read from Reap, so nothing was proposed. Get a fresh quote."). No envelope and no audit row, and no checkout call either.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">Separately, the registry logs a <code>TOOL_DENIED</code> event when the model calls a tool that is not on its allowlist; the panel shows these under "Shopping action blocked".</p>
+
+  <h3>5e. The agent's three tools</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:30%">Tool (input)</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>listCatalog</code><br>(<code>category?</code>, <code>maxPriceCents?</code>)</td><td>Returns items from <code>lib/catalog.json</code>. No network call. Out-of-scope items stay visible on purpose: seeing an item is not permission to buy it.</td></tr>
+        <tr><td><code>getQuote</code><br>(<code>sku</code>, <code>quantity</code> 1 to 99)</td><td>Calls <code>reapAdapter.createQuote</code>, which is <code>POST /agentic/quotes</code>. Returns the quote in integer cents. A price, not a purchase.</td></tr>
+        <tr><td><code>proposeCheckout</code><br>(<code>quoteId</code>, <code>reason</code> 1 to 500 characters)</td><td>Calls <code>gate.proposeCheckout</code> with the session ID from the cookie. Returns <code>{ decision, message, approvalUrl?, checkoutId?, envelopeHash }</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Every call goes through <code>lib/agent/router.ts</code> (<code>dispatchTool</code>), which asks the registry first. <strong>Why there is no checkout tool:</strong> if the model had one, every control would depend on the model choosing to respect it. Without one, the worst a confused or manipulated model can do is ask, and asking is governed. There is no HTTP route that creates a checkout either.</p>
+
+  <h3>5f. Request lifecycle</h3>
+  <ol class="steps">
+    <li><strong>User message.</strong> The browser posts to <code>POST /api/agent</code> (same-origin check, at most 40 messages, session cookie <code>agentcart_session</code>). The server adds the system prompt and the current spending limits read from SQLite, then streams the model with the three tools and <code>stopWhen: stepCountIs(6)</code>.</li>
+    <li><strong><code>listCatalog</code></strong> through the router: allowlist check, a <code>tool_calls</code> row, catalog items back.</li>
+    <li><strong><code>getQuote</code></strong>: <code>POST /agentic/quotes</code> with <code>externalCheckout: { merchantDomain, checkoutUrl }</code> (the catalog permalink, quantity rewritten), an <code>Idempotency-Key</code>, <code>DEMO_EMAIL</code> and the demo shipping address. If Reap answers <code>CHECKOUT_URL_INVALID</code>, it retries with <code>items: [{ variantId }]</code>. Amounts become cents in <code>toCents</code>; merchant, SKU and quantity go into <code>reap_quotes</code>.</li>
+    <li><strong><code>proposeCheckout({ quoteId, reason })</code></strong> becomes <code>gate.proposeCheckout({ quoteId, reason, sessionId })</code>.</li>
+    <li><strong>Re-read.</strong> The gate expires stale approvals, loads the mandate and re-reads the quote with <code>GET /agentic/quotes/:id</code>. It never uses numbers from the model.</li>
+    <li><strong><code>buildEnvelope</code></strong> from the quote, catalog, mandate, registry, tool trace and reason.</li>
+    <li><strong>Sign.</strong> SHA-256 of the canonical JSON, then an Ed25519 signature with <code>AGENT_PRIVATE_KEY</code>.</li>
+    <li><strong>Dispose.</strong> <code>verifyEnvelope</code> and <code>checkIdentity</code> first (stop here on failure), then <code>dispose()</code> with the mandate, remaining budget, velocity count and listed currency.</li>
+    <li><strong><code>audit.append</code></strong>: the hash-chained row is written for every decision, before any checkout call.</li>
+    <li><strong>Branch.</strong>
+      <ul>
+        <li><span class="badge b-deny">DENY</span> returns the reason. No budget hold, no Reap call.</li>
+        <li><span class="badge b-esc">ESCALATE</span> holds the budget and writes a <code>PENDING</code> approval that expires in 5 minutes. The panel shows the Permission card. Approve sends <code>POST /api/approvals { envelopeHash, action: "APPROVE", reviewer }</code>; <code>gate.approve</code> re-reads the quote (re-quotes if expired), re-seals if the quote or mandate changed, denies <code>QUOTE_CHANGED</code> if it differs or costs more, re-runs every rule, appends <span class="badge b-auto">AUTO_EXECUTE</span> with <code>HUMAN_APPROVED</code> and continues at step 11.</li>
+        <li><span class="badge b-auto">AUTO_EXECUTE</span> and <span class="badge b-obs">OBSERVE</span> continue at step 11.</li>
+      </ul>
+    </li>
+    <li><strong>Reap <code>createCheckout</code>.</strong> The gate holds the budget, then sends <code>POST /agentic/checkouts { quoteId, enrollmentId, presentation: { type: "REDIRECT", returnUrl } }</code> with <code>Idempotency-Key</code> = the envelope hash and <code>returnUrl</code> = <code>{APP_BASE_URL}/orders/done?envelopeHash={hash}</code>. In the sandbox it also sends <code>X-Simulate-Checkout: COMPLETED</code> unless <code>REAP_SIMULATE_CHECKOUT=false</code>. Then <code>audit.markExecuted</code> stores the checkout ID. If Reap fails, the hold is released and the message says nothing was charged. (Backup mode only: with <code>DEMO_SIMULATE_WITHOUT_CARD=true</code> and no <code>ACTIVE</code> card, the gate skips Reap, records a <code>sim_…</code> checkout ID and says so in its message.)</li>
+    <li><strong>Hosted approval</strong>, only when Reap returns <code>nextAction.url</code>: the chat shows "Review on Reap", the cardholder approves on Reap's page, and Reap redirects to <code>/orders/done?envelopeHash=…</code>. <span class="tag tag-verify">Not yet verified</span></li>
+    <li><strong>Poll.</strong> <code>/orders/done</code> calls <code>GET /api/checkout?envelopeHash=…</code> every 2 seconds (the chat's order card uses <code>?checkoutId=…</code>). The route maps the hash to the checkout through the audit log (<code>checkoutIdForEnvelope</code>) and calls <code>GET /agentic/checkouts/:id</code>.</li>
+    <li><strong><code>recordCheckoutOutcome</code></strong>: <code>COMPLETED</code> settles the hold (the money counts as spent); <code>FAILED</code> or <code>EXPIRED</code> releases it. Only <code>COMPLETED</code> shows "Order confirmed: {orderId} · {amount}".</li>
+  </ol>
+  <p class="note">The return URL carries <code>envelopeHash</code>, not <code>checkoutId</code>. The hash exists before Reap answers, and the server maps it back to the checkout through its own log, so the browser never supplies the ID that gets checked.</p>
+
+  <h3>5g. Tech stack</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:24%">Layer</th><th>Choice (versions from <code>package.json</code>)</th></tr></thead>
+      <tbody>
+        <tr><td>App framework</td><td>Next.js 16.3.8 (App Router, route handlers), React 19.3.0, TypeScript 5</td></tr>
+        <tr><td>Agent runtime</td><td>AI SDK <code>ai</code> 5.0.271, <code>@ai-sdk/react</code> 2.0.274, <code>@ai-sdk/openai-compatible</code> ^1.0.58</td></tr>
+        <tr><td>Model</td><td>Any OpenAI-compatible endpoint with tool calling; default <code>OPENAI_MODEL=gpt-6-luna</code></td></tr>
+        <tr><td>Storage</td><td>SQLite through <code>better-sqlite3</code> 12.4.6, WAL mode, one file at <code>data/safr.db</code></td></tr>
+        <tr><td>Validation</td><td><code>zod</code> ^3.23</td></tr>
+        <tr><td>Cryptography</td><td>Node's built-in <code>crypto</code>: Ed25519 signatures, SHA-256 hashes</td></tr>
+        <tr><td>Payments</td><td>Reap Agentic Payments sandbox, <code>Reap-Version: 2025-02-14</code></td></tr>
+        <tr><td>Styling</td><td>Tailwind CSS 4</td></tr>
+        <tr><td>Tests and scripts</td><td>Vitest 3 (66 tests in 6 files), <code>tsx</code> for <code>scripts/*.ts</code></td></tr>
+        <tr><td>Runtime</td><td>Node 20.9 or newer (tested on Node 24)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================== 6. Setup ============================== -->
+<section id="setup" class="runbook">
+  <h2><span class="num">6</span>Setup</h2>
+  <p>About 10 minutes on a fresh laptop. Every command runs from the repository root.</p>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>Node 20.9 or newer (tested on Node 24), npm, git and <code>openssl</code> (macOS ships one).</li>
+    <li>A Reap sandbox API key and the sandbox test card, both from the Reap desk.</li>
+    <li>An OpenAI-compatible API key for a model that supports tool calling.</li>
+  </ul>
+
+  <h3>1. Clone and install</h3>
+<pre><code>git clone https://github.com/terence-c/reap-hackathon-09oct.git
+cd reap-hackathon-09oct
+npm install</code></pre>
+  <p class="small muted">This document matches commit <code>5fe4e50</code>. If <code>git log</code> in your clone does not include it, that work has not reached <code>main</code> yet.</p>
+
+  <h3>2. Check the SQLite driver</h3>
+<pre><code>node -e "new (require('better-sqlite3'))(':memory:')"</code></pre>
+  <p>No output means it works. If it errors and <code>npm config get ignore-scripts</code> prints <code>true</code>, the native build never ran:</p>
+<pre><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code></pre>
+
+  <h3>3. Environment</h3>
+<pre><code>cp .env.example .env.local</code></pre>
+  <p>Never commit <code>.env.local</code>; the repository is public. The dev server boots with every key blank, because Reap and LLM keys are checked only when first used.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th>Variable</th><th>Purpose</th><th>Supplied by</th><th>Placeholder or default</th><th>To boot</th><th>To transact</th></tr></thead>
+      <tbody>
+        <tr><td><code>REAP_API_KEY</code> <span class="tag tag-secret">Secret</span></td><td>Bearer token on every Reap call</td><td>Reap desk</td><td><code>&lt;reap-sandbox-key&gt;</code></td><td>No</td><td>Yes</td></tr>
+        <tr><td><code>REAP_BASE_URL</code></td><td>Reap host</td><td>Preset</td><td><code>https://sg.sandbox.api.reap.global</code></td><td>No</td><td>Default</td></tr>
+        <tr><td><code>REAP_API_VERSION</code></td><td><code>Reap-Version</code> header</td><td>Preset</td><td><code>2025-02-14</code></td><td>No</td><td>Default</td></tr>
+        <tr><td><code>REAP_ENROLLMENT_ID</code> <span class="tag tag-secret">Secret</span></td><td>Card to charge when none was added in the app</td><td>Printed by <code>npm run enroll</code></td><td><code>&lt;enrollment-id&gt;</code></td><td>No</td><td>Only without "Add card"; required by <code>npm run smoke</code></td></tr>
+        <tr><td><code>REAP_SIMULATE_CHECKOUT</code></td><td>Sandbox only: send <code>X-Simulate-Checkout: COMPLETED</code> so checkouts complete without Reap's hosted page. Not in <code>.env.example</code>; read by <code>lib/env.ts</code></td><td>You</td><td><code>true</code></td><td>No</td><td>No; <code>false</code> shows the hosted page</td></tr>
+        <tr><td><code>APP_BASE_URL</code></td><td>Where Reap sends the browser back. Must be HTTPS</td><td>Preset</td><td><code>https://localhost:3443</code></td><td>Must be a valid URL if set</td><td>Yes, HTTPS</td></tr>
+        <tr><td><code>DEMO_SIMULATE_WITHOUT_CARD</code></td><td>Backup only: with no <code>ACTIVE</code> card, a cleared purchase skips Reap and finishes as a labeled simulated checkout (order ID starts <code>SIMULATED-</code>). Keep <code>false</code> for the real demo</td><td>Preset</td><td><code>false</code></td><td>No</td><td>No</td></tr>
+        <tr><td><code>DEMO_EMAIL</code></td><td>Email on quotes and the card enrollment. Reap rejects <code>.test</code> addresses</td><td>Preset</td><td><code>demo@example.com</code></td><td>No</td><td>Default</td></tr>
+        <tr><td><code>AGENT_ID</code></td><td>The agent's registry ID</td><td>Preset</td><td><code>purchasing-agent-v1</code></td><td>No</td><td>Default</td></tr>
+        <tr><td><code>AGENT_PRIVATE_KEY</code> <span class="tag tag-secret">Secret</span></td><td>Ed25519 key that signs every envelope (base64 PKCS#8 DER)</td><td><code>npm run keygen</code></td><td><code>&lt;base64-pkcs8&gt;</code></td><td>No</td><td>Yes; without it every purchase is denied <code>IDENTITY_BAD_SIGNATURE</code></td></tr>
+        <tr><td><code>OPENAI_API_KEY</code> <span class="tag tag-secret">Secret</span></td><td>LLM key</td><td>Your LLM provider</td><td><code>&lt;llm-key&gt;</code></td><td>No (chat answers 503 until set)</td><td>Yes</td></tr>
+        <tr><td><code>OPENAI_BASE_URL</code></td><td>OpenAI-compatible endpoint</td><td>Preset</td><td><code>https://api.openai.com/v1</code></td><td>No</td><td>Default</td></tr>
+        <tr><td><code>OPENAI_MODEL</code></td><td>Model name; must support tool calling. Change together with <code>OPENAI_BASE_URL</code></td><td>Preset</td><td><code>gpt-6-luna</code></td><td>No</td><td>Default</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>4. Register the agent's key</h3>
+<pre><code>npm run keygen</code></pre>
+  <p>Registers the public key on the agent's record in <code>data/safr.db</code> and prints its fingerprint. If <code>AGENT_PRIVATE_KEY</code> is empty it mints a key pair and prints an <code>AGENT_PRIVATE_KEY=…</code> line: paste it into <code>.env.local</code>. If the variable is set it reuses it, so re-running is safe. <code>npm run keygen -- --new</code> always mints a new pair (the old key stops verifying).</p>
+
+  <h3>5. Start the app on local HTTPS</h3>
+  <p><code>npm run dev:https</code> serves the certificate in <code>./certificates/</code> (gitignored, so a fresh clone has none). Create it once; it is valid for 30 days:</p>
+<pre><code>mkdir -p certificates
+openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 30 -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+  -keyout certificates/localhost-key.pem -out certificates/localhost.pem
+npm run dev:https          <span class="c"># https://localhost:3443</span></code></pre>
+  <p>The certificate is self-signed, so the browser warns on the first visit: choose Advanced, then Proceed to localhost. Do this once before adding a card, so Reap's redirect back lands straight in the app. The repository does not record the exact command its authors used; this one produces the same kind of certificate (RSA 2048, <code>CN=localhost</code>, names <code>localhost</code> and <code>127.0.0.1</code>). Reap only sends people back to HTTPS addresses and it accepts <code>https://localhost</code>, so <strong>no tunnel is needed</strong>. The original plan used ngrok; <code>NOTES.md</code> records that Reap accepts <code>https://localhost:3443</code>, so it was dropped. Only if that ever changes: run a tunnel that gives a public HTTPS URL and set <code>APP_BASE_URL</code> to it. Plain <code>npm run dev</code> (http://localhost:3000) is fine for UI work but cannot add a card or complete a checkout; if another server already owns <code>localhost:3000</code>, open http://127.0.0.1:3000 instead (allowed in <code>next.config.ts</code>).</p>
+
+  <h3>6. Add the payment card</h3>
+  <p><strong>From the app:</strong> in "01 · Payment card" click <strong>Add card</strong>. The app calls <code>POST /api/enrollment</code>, which creates an EXTERNAL enrollment and sends you to Reap's hosted page. Enter the Reap sandbox test card (OTP <code>456789</code> if asked). Reap returns you to <code>/orders/enrollment-done</code>, which polls <code>GET /api/enrollment</code> until Reap says <code>ACTIVE</code>; the panel then shows "Card ready". AgentCart never sees the card details. Each Reap link works once: if Reap says the session was used, click <strong>Start again</strong> in the panel.</p>
+  <p><strong>From the terminal:</strong></p>
+<pre><code>npm run enroll</code></pre>
+  <p>The script creates the enrollment (this is where the enrollment ID comes from), prints <code>Enrollment ID: …</code> and <code>Hosted card-entry URL: …</code>, and waits up to 10 minutes. A person opens the URL and enters the test card; when Reap reports <code>ACTIVE</code> the script prints <code>REAP_ENROLLMENT_ID=…</code>. The enrollment is also saved in <code>data/safr.db</code>, so the app uses it straight away; paste the line into <code>.env.local</code> only for <code>npm run smoke</code> or another laptop.</p>
+
+  <h3>7. Run the tests</h3>
+<pre><code>npm test                   <span class="c"># vitest: 66 passed (6 files)</span></code></pre>
+  <p>The tests use an in-memory database and the mock Reap adapter, so they never touch <code>data/safr.db</code> or the network.</p>
+
+  <h3>8. Optional live checks</h3>
+<pre><code>npm run e2e                <span class="c"># quote, checkout, wait for COMPLETED; prints the orderId</span>
+npm run smoke              <span class="c"># the demo script through the real gate and sandbox; PASS / FAIL / SKIP per step</span>
+npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one SKU</span></code></pre>
+  <p class="small"><code>npm run e2e</code> charges the card saved in the app or <code>REAP_ENROLLMENT_ID</code>. <code>npm run smoke</code> uses its own in-memory database and needs <code>REAP_ENROLLMENT_ID</code> and <code>AGENT_PRIVATE_KEY</code>. Both create real sandbox checkouts (no real money).</p>
+
+  <h3>You are ready when</h3>
+  <ul class="check">
+    <li><code>npm test</code> reports 66 passed.</li>
+    <li>https://localhost:3443 loads (certificate warning accepted once); the header says "Assistant ready" and "Reap sandbox".</li>
+    <li>"01 · Payment card" shows "Card ready".</li>
+    <li>"Assistant details" (under "02 · Spending limits") shows a signing key fingerprint, not "Not set up yet".</li>
+    <li>"02 · Spending limits" shows Budget left S$150.00, Ask me above S$80.00, Total budget S$150.00, Currency SGD.</li>
+    <li>"05 · Activity" shows "No records yet" (run <code>npm run reset-demo</code> if not).</li>
+    <li>The current time is inside the mandate dates: 9 Oct 2026 00:00 to 10 Oct 2026 23:59:59, Singapore time.</li>
+  </ul>
+</section>
+
+<!-- ============================== 7. Identities ============================== -->
+<section id="identities" class="runbook">
+  <h2><span class="num">7</span>Demo accounts and identities</h2>
+  <p>Values marked <span class="tag tag-secret">Secret</span> never appear on video.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:18%">Identity</th><th>Value</th><th style="width:24%">Source</th></tr></thead>
+      <tbody>
+        <tr><td>Principal</td><td><code>demo-user-001</code>, email <code>demo@example.com</code></td><td><code>lib/mandate.demo.json</code>; <code>DEMO_EMAIL</code></td></tr>
+        <tr><td>Agent</td><td><code>purchasing-agent-v1</code>, "AgentCart purchasing agent", owner <code>team-agentcart</code>, status <code>ACTIVE</code></td><td><code>AGENT_ID</code>; seeded by <code>lib/safr/db.ts</code></td></tr>
+        <tr><td>Agent model and instructions</td><td>Model from <code>OPENAI_MODEL</code> (default <code>gpt-6-luna</code>); prompt hash = SHA-256 of <code>lib/agent/system-prompt.ts</code>, refreshed on startup</td><td><code>lib/safr/db.ts</code></td></tr>
+        <tr><td>Allowed tools</td><td><code>listCatalog</code>, <code>getQuote</code>, <code>proposeCheckout</code></td><td>Registry seed</td></tr>
+        <tr><td>Allowed action types</td><td><code>CREATE_CHECKOUT</code></td><td>Registry seed</td></tr>
+        <tr><td>Agent public key</td><td>Base64 SPKI DER in <code>agents.public_key</code> in <code>data/safr.db</code> (gitignored, not committed). Fingerprint = first 16 hex characters of its SHA-256, shown in "Assistant details"</td><td><code>npm run keygen</code></td></tr>
+        <tr><td>Agent private key <span class="tag tag-secret">Secret</span></td><td><code>AGENT_PRIVATE_KEY</code> in <code>.env.local</code></td><td><code>npm run keygen</code></td></tr>
+        <tr><td>Mandate</td><td><code>mandate-001</code>, version 1; currency <code>SGD</code>; <code>totalBudget</code> 15000 (S$150.00, also the hard cap); <code>autoThreshold</code> 8000 (S$80.00); categories "Office &amp; Business Supplies", "Books &amp; Stationery"; valid <code>2026-10-09T00:00:00+08:00</code> to <code>2026-10-10T23:59:59+08:00</code>; <code>killSwitch</code> false; no merchant allowlist</td><td><code>lib/mandate.demo.json</code></td></tr>
+        <tr><td>Reap enrollment <span class="tag tag-secret">Secret ID</span></td><td><code>source: "EXTERNAL"</code>, <code>owner: { type: "CLIENT_REFERENCE", id: "demo-user-001", email: "demo@example.com" }</code>, <code>presentation: { type: "REDIRECT", returnUrl: "{APP_BASE_URL}/orders/enrollment-done" }</code>. ID stored in <code>reap_enrollments</code> or <code>REAP_ENROLLMENT_ID</code></td><td>"Add card" or <code>npm run enroll</code></td></tr>
+        <tr><td>Test card <span class="tag tag-secret">Secret</span></td><td>Number ____________________ CVC ______ Expiry ______ (from the Reap desk; Reap's documented sandbox cards are listed in <code>NOTES.md</code>). OTP if asked: <code>456789</code></td><td>Reap</td></tr>
+        <tr><td>Reviewer</td><td><code>You</code>: the app's Approve and Decline buttons send this name. It is stored in <code>approvals.reviewer</code> and in the reason ("Approved by You: …"). Not authenticated</td><td><code>app/components/governance-panel.tsx</code></td></tr>
+        <tr><td>Shipping address</td><td>Agent Cart, <code>+6591234567</code>, 1 Raffles Place, Singapore 048616, SG (demo data in a format Reap and merchants accept)</td><td><code>DEMO_SHIPPING_ADDRESS</code> in <code>lib/reap/quotes.ts</code></td></tr>
+        <tr><td>Session</td><td><code>agentcart_session</code> cookie: a UUID, HttpOnly, SameSite=Lax, 24 hours</td><td><code>lib/agent/http.ts</code></td></tr>
+        <tr><td>Sandbox</td><td><code>https://sg.sandbox.api.reap.global</code>, header <code>Reap-Version: 2025-02-14</code></td><td><code>.env.example</code></td></tr>
+        <tr><td>API keys <span class="tag tag-secret">Secret</span></td><td><code>REAP_API_KEY</code>, <code>OPENAI_API_KEY</code></td><td><code>.env.local</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================== 8. Demo flow ============================== -->
+<section id="demo-flow" class="runbook">
+  <h2><span class="num">8</span>Demo flow: the script for the video</h2>
+
+  <h3>The catalog</h3>
+  <p>All eight items from <code>lib/catalog.json</code>. Prices are catalog unit prices; the gate always judges Reap's quoted total, which adds delivery and tax. Delivery varies by merchant, so the totals on screen will be higher than these.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th>SKU</th><th>Name</th><th>Merchant</th><th>Category</th><th>Unit price</th><th>Step</th></tr></thead>
+      <tbody>
+        <tr><td><code>popular-ghost-stories-12</code></td><td>True Singapore Ghost Stories Book 12</td><td>popular.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$10.79</td><td>1, 6, 7, 8</td></tr>
+        <tr><td><code>byndartisan-luggage-tag</code></td><td>Wabisabi Luggage Tag - Brown/Oat</td><td>byndartisan.com</td><td>Books &amp; Stationery</td><td class="nowrap">S$85.00</td><td>2</td></tr>
+        <tr><td><code>picketandrail-geometry-table</code></td><td>Geometry 12 Custom Table - Cantilever</td><td>picketandrail.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$699.00</td><td>3</td></tr>
+        <tr><td><code>zmdesktop-laptop-stand</code></td><td>Modular Space-Saving Laptop Stand (2025) - Black Walnut</td><td>zmdesktop.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">US$58.00</td><td>4</td></tr>
+        <tr><td><code>brewlander-6pack</code></td><td>SG LAHger - 6 Pack</td><td>brewlander.com</td><td>Drinks &amp; Alcohol</td><td class="nowrap">S$33.00</td><td>5</td></tr>
+        <tr><td><code>ergotune-pegboard</code></td><td>F-Clamp Pegboard Panel - Black</td><td>ergotune.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$59.00</td><td>spare</td></tr>
+        <tr><td><code>boxgreen-snack-bag</code></td><td>The Trio Big Bag of Snacks</td><td>boxgreen.co</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$50.00</td><td>spare</td></tr>
+        <tr><td><code>kinokuniya-conan-106</code></td><td>名偵探柯南 (106)</td><td>kinokuniya.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$9.40</td><td>spare</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">The empty chat shows six numbered tiles that send the script in order: 01 "Buy the True Singapore Ghost Stories Book 12", 02 "Buy the Wabisabi Luggage Tag", 03 "Buy the Geometry 12 Custom Table", 04 "Buy the Modular Space-Saving Laptop Stand", 05 "Buy the SG LAHger beer 6-pack", 06 "Buy the True Singapore Ghost Stories Book 12 again". After the first message they stay available as chips under the chat. Typing the lines below works the same.</p>
+
+  <h3>The script</h3>
+  <p class="small">Panel labels: <span class="badge b-auto">Allowed</span> = <code>AUTO_EXECUTE</code>, <span class="badge b-esc">Needs your approval</span> = <code>ESCALATE</code>, <span class="badge b-deny">Not allowed</span> = <code>DENY</code>, <span class="badge b-obs">Already checked</span> = <code>OBSERVE</code>. Rules fired are under "Technical details" in "04 · Permission". The agent's exact words vary; the column below says what it is instructed to say.</p>
+  <div class="print-wide">
+  <div class="table-wrap">
+    <table class="flow">
+      <thead><tr><th>Step</th><th style="width:14%">You type or click</th><th style="width:14%">The agent says</th><th style="width:21%">The SAFR panel shows</th><th style="width:17%">On Reap's side</th><th style="width:17%">Narration</th><th style="width:10%">Scenario</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>0</td>
+          <td>Click "Edit spending limits" in "02 · Spending limits". Show Total budget 15000 cents, Ask me above 8000, Currency SGD, the two categories and the dates. Click Close (saving also works but bumps the version).</td>
+          <td>Nothing yet.</td>
+          <td>Drawer "Set your spending limits." Panel: Budget left S$150.00, Ask me above S$80.00, Total budget S$150.00, Currency SGD, category chips, From and To dates.</td>
+          <td>Nothing.</td>
+          <td>"I'm the team lead. I give the agent S$150 for two days: Singapore dollars, office and book supplies, and anything over S$80 comes to me."</td>
+          <td>(iii) Delegated procurement</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>"Get a copy of True Singapore Ghost Stories 12 for the office" (or tile 01).</td>
+          <td>Lists the catalog, shows the full price card (Items S$10.79, Delivery, Tax, Total), says it is Allowed and sent to Reap, and that the order card will confirm it. Never says "ordered" itself.</td>
+          <td><span class="badge b-auto">Allowed</span> rules: none. "03 · Purchase details": the book × 1, {total} at popular.com.sg, "Signed by the assistant". Activity: #1 Allowed, {total} · popular.com.sg, "Sent to Reap". Budget left drops by the total.</td>
+          <td><code>POST /agentic/quotes</code>, <code>GET /agentic/quotes/:id</code>, <code>POST /agentic/checkouts</code>, then <code>GET /agentic/checkouts/:id</code> until <code>COMPLETED</code>. Chat card: "Waiting for Reap..." then "Order confirmed: {orderId} · {amount}". Default: no hosted page (simulated). With <code>REAP_SIMULATE_CHECKOUT=false</code>: "Review on Reap", approve, return to <code>/orders/done?envelopeHash=…</code> <span class="tag tag-verify">Not yet verified</span></td>
+          <td>"Small routine business spend. Inside every limit, so it goes straight through, and we only call it confirmed when Reap says COMPLETED."</td>
+          <td>(i) Business spend</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>"Order the Wabisabi luggage tag" (or tile 02). When the Permission card appears, click <strong>Approve</strong>.</td>
+          <td>Shows the full price (S$85.00 plus delivery), says it needs your approval and to approve or decline in the Permission card within 5 minutes.</td>
+          <td><span class="badge b-esc">Needs your approval</span> rules: <code>OVER_AUTO_THRESHOLD</code>. "04 · Permission": "Your approval is needed", {total}, "Wabisabi Luggage Tag - Brown/Oat at byndartisan.com", "Record {hash} · 4:59 left", Approve / Decline. After Approve: "You approved a request", <span class="badge b-auto">Allowed</span>, "Approved by You: {total} at byndartisan.com.", order card. Activity: #2 Needs your approval, #3 Allowed with "Sent to Reap" (rules <code>OVER_AUTO_THRESHOLD</code>, <code>HUMAN_APPROVED</code>).</td>
+          <td>Before Approve: quote only, no checkout. After Approve: quote re-read (re-quoted if expired), <code>POST /agentic/checkouts</code>, poll to <code>COMPLETED</code>.</td>
+          <td>"An unusual amount needs a human. Over S$80, so the agent waits for me, for five minutes at most, and my yes only works for this exact cart."</td>
+          <td>(iii) Delegated procurement</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>"Buy the Geometry 12 custom table" (or tile 03).</td>
+          <td>Shows the full price (S$699.00 plus delivery), says it is not allowed, repeats the reason, and offers an item that fits.</td>
+          <td><span class="badge b-deny">Not allowed</span> rules: <code>OVER_HARD_CAP</code>. "{total} is over the mandate's S$150.00 total budget, so this purchase is blocked." Activity: #4 Not allowed, no "Sent to Reap".</td>
+          <td>Quote only (<code>POST</code> and <code>GET /agentic/quotes</code>). No checkout call.</td>
+          <td>"Authority has a ceiling. Over the whole budget: refused, logged, and Reap's checkout is never called."</td>
+          <td>(i) Business spend: overspend</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>"Get the modular laptop stand" (or tile 04).</td>
+          <td>Shows Reap's quote (Reap prices this merchant in SGD, S$76.00 per <code>NOTES.md</code>), says it is not allowed and why.</td>
+          <td><span class="badge b-deny">Not allowed</span> rules: <code>CURRENCY_MISMATCH</code>. "zmdesktop.com prices in USD, but the mandate only allows SGD, so this purchase is blocked."</td>
+          <td>Quote only. No checkout call.</td>
+          <td>"Controls are specific, not vibes. Our catalog lists this at US$58. The mandate is SGD only, so it is refused even though Reap converted the quote."</td>
+          <td>(iv) Agent-to-agent: the seller's presentation cannot move the rules</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>"Grab a 6-pack of SG LAHger for Friday" (or tile 05).</td>
+          <td><span class="tag tag-reap">Reap side</span> Today: Reap cannot price it, so the agent says so and offers an in-scope item. If Reap prices it: shows S$33.00 plus delivery and says it is not allowed.</td>
+          <td>Today: no new decision (no quote, so nothing reaches the gate and no audit row). If priced: <span class="badge b-deny">Not allowed</span> rules: <code>CATEGORY_OUT_OF_SCOPE</code>. "Drinks &amp; Alcohol is outside this mandate (allowed: Office &amp; Business Supplies, Books &amp; Stationery), so this purchase is blocked."</td>
+          <td><code>POST /agentic/quotes</code> returns 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code> for brewlander.com. No checkout either way.</td>
+          <td>"Scope, not just amount. Only S$33, but beer is not office supplies." If Reap still cannot price it: "Reap can't price this merchant right now. If it could, the gate would deny it on category before any checkout."</td>
+          <td>(i) Business spend: out of scope</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Ghost Stories again, within 5 minutes of step 1: "Buy the True Singapore Ghost Stories Book 12 again" (tile 06).</td>
+          <td>Gets a fresh quote, asks again, says it went ahead and was sent to Reap with a note that it was a repeat.</td>
+          <td><span class="badge b-obs">Already checked</span> rules: <code>VELOCITY</code>. "{total} is within the mandate, but it is a repeat purchase from popular.com.sg within 5 minutes, so it goes ahead flagged for review." Activity: Already checked, "Sent to Reap".</td>
+          <td>Quote, checkout, poll to <code>COMPLETED</code>, as in step 1.</td>
+          <td>"A high-frequency pattern: flagged, not blocked. It goes through, but the record says it was a repeat."</td>
+          <td>(ii) High-frequency small payments</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><span class="tag tag-todo">Not yet built</span> no kill switch control in the app. Off camera, turn it on with the <code>curl</code> in <a href="#reset">section 9</a>, then retry the Ghost Stories book (tile 01). Turn it off again before step 8.</td>
+          <td>Says it is not allowed: all spending is paused.</td>
+          <td><span class="badge b-deny">Not allowed</span> rules: <code>KILL_SWITCH</code>. "The mandate's kill switch is on, so all spending is paused." The spending limits card does not show the switch.</td>
+          <td>Quote only. No checkout call.</td>
+          <td>"The principal can stop everything instantly. One switch, and every purchase is refused before any limit is even checked."</td>
+          <td>(iii) Delegated procurement</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Turn on <strong>Pause assistant</strong> in "02 · Spending limits" (this revokes the agent). Then retry the Ghost Stories book (tile 01). Turn Pause off afterwards.</td>
+          <td>Says the assistant is paused and does not suggest other items.</td>
+          <td>Header: "Assistant paused". Panel: "Paused. The assistant can still browse and check prices, but every purchase is refused." <span class="badge b-deny">Not allowed</span> rules: <code>IDENTITY_REVOKED</code>. "Agent purchasing-agent-v1 has been revoked, so it cannot spend." Activity row added.</td>
+          <td>Quote only (a paused agent can still get prices). No checkout call.</td>
+          <td>"Identity first, always. A revoked agent is refused at the identity check, before the gate even looks at the budget."</td>
+          <td>(iv) Agent-to-agent: identity is a signature, not a string</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Click <strong>Tamper with a record</strong> in "05 · Activity" (dev server only).</td>
+          <td>Nothing.</td>
+          <td>Badge changes from "Records match" to "A record was changed". The latest row's amount drops to a tenth: the edit an insider with database access would make.</td>
+          <td>Nothing.</td>
+          <td>"The record is independent of everyone, including us. I just edited a saved record, and the chain caught it."</td>
+          <td>All four: the record finance asks for</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <div class="note warn">
+    <p><strong>Step notes.</strong> Step 6 needs the real clock to be within 5 minutes of step 1's proposal, or it will be an ordinary Allowed. If delivery fees have used up more of the budget than expected, step 6 shows <code>OVER_REMAINING_BUDGET</code> instead. The category rule in step 5 is covered by <code>tests/gate.test.ts</code> ("demo script, in order") and <code>tests/disposition.test.ts</code> ("beer S$33 → DENY CATEGORY_OUT_OF_SCOPE"). In steps 7 and 8 the gate stops the book before any budget or velocity rule, so the repeat does not matter. The agent is shown its current limits, kill switch included; if it declines to ask in step 7, reply "Ask for permission anyway": the point is that the gate, not the agent, stops it. Do not run <code>npm run reset-demo</code> between steps; it empties the log.</p>
+  </div>
+
+  <h3>Timing</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th>Cut</th><th>Steps</th><th>Running order</th></tr></thead>
+      <tbody>
+        <tr><td>90 seconds (matches <code>PITCH.md</code>)</td><td>0, 1, 2, 3, 4, 5, 8, 9. Drop 6 (velocity) and 7 (kill switch, terminal only).</td><td>0:00 step 0 · 0:15 step 1 asked · 0:25 step 1 confirmed · 0:38 step 2 approved · 0:50 steps 3, 4, 5 · 1:05 steps 8 and 9 · 1:22 closing line. Model replies take several seconds each, so record the full run and cut the waits in editing.</td></tr>
+        <tr><td>4 minutes</td><td>All, 0 to 9</td><td>0:00 opening line · 0:20 step 0 · 0:40 step 1 · 1:15 step 2 · 1:50 step 3 · 2:10 step 4 · 2:30 step 5 · 2:45 step 6 · 3:05 step 7 · 3:20 step 8 · 3:40 step 9 · 3:55 closing line.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Opening line:</strong> "AI agents are starting to pay for things. The moment one can, three things a human buyer gave us for free disappear: a limit on what it may spend, someone to check anything unusual, and a record of why the money moved. AgentCart puts all three back, at the moment of payment."</p>
+  <p><strong>Closing line:</strong> "Every agent can decide; ours can't spend until its authority is verified, its limits checked, and the decision logged."</p>
+</section>
+
+<!-- ============================== 9. Reset ============================== -->
+<section id="reset" class="runbook">
+  <h2><span class="num">9</span>Reset between takes</h2>
+  <h3>The one command</h3>
+<pre><code>npm run reset-demo</code></pre>
+  <p>Empties <code>audit</code>, <code>reservations</code>, <code>approvals</code>, <code>tool_calls</code> and <code>reap_quotes</code>; restores <code>mandate-001</code> to <code>lib/mandate.demo.json</code> at version 1 (kill switch off); sets the agent to <code>ACTIVE</code>; refreshes the model and prompt hash. It keeps the registered public key and the saved card, and is safe while the dev server runs. Then <strong>reload the browser</strong>: the chat lives in the tab. Expected output:</p>
+<pre><code>Demo reset: activity log empty, budget S$150.00 free, agent ACTIVE.
+Agent key registered: yes
+Card ready: yes</code></pre>
+
+  <h3>What the app can do, and what needs the terminal</h3>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:28%">Task</th><th style="width:28%">In the app</th><th>Terminal</th></tr></thead>
+      <tbody>
+        <tr><td>Empty the log, budget holds and approvals</td><td>No</td><td><code>npm run reset-demo</code></td></tr>
+        <tr><td>Agent back to <code>ACTIVE</code></td><td>Yes: turn off "Pause assistant"</td><td><code>npm run reset-demo</code>, or the registry <code>curl</code> below</td></tr>
+        <tr><td>Kill switch off (or on)</td><td><span class="tag tag-todo">Not yet built</span> No control in the app</td><td><code>npm run reset-demo</code>, or the mandate <code>curl</code> below</td></tr>
+        <tr><td>Mandate back to version 1</td><td>No: every save bumps the version</td><td><code>npm run reset-demo</code></td></tr>
+        <tr><td>Budget, threshold, currency, categories, dates</td><td>Yes: "Edit spending limits" (version goes up)</td><td><code>npm run reset-demo</code> for the defaults</td></tr>
+        <tr><td>Clear the chat</td><td>Yes: reload the page</td><td></td></tr>
+        <tr><td>Card expired, failed or revoked</td><td>Yes: "Add card" again; the newest <code>ACTIVE</code> card is the one charged</td><td><code>npm run enroll</code></td></tr>
+        <tr><td>Delete the SQLite file</td><td>No</td><td>See the full wipe below</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Kill switch from the terminal (step 7)</h3>
+  <p><code>POST /api/mandate</code> replaces the whole mandate with the body below (the demo values) and bumps the version. <code>-k</code> skips certificate checks for the local certificate.</p>
+<pre><code><span class="c"># on</span>
+curl -sk -X POST https://localhost:3443/api/mandate \
+  -H 'content-type: application/json' \
+  -d '{"id":"mandate-001","principalId":"demo-user-001","currency":"SGD","totalBudget":15000,"autoThreshold":8000,"allowedCategories":["Office &amp; Business Supplies","Books &amp; Stationery"],"validFrom":"2026-10-09T00:00:00+08:00","validTo":"2026-10-10T23:59:59+08:00","killSwitch":true}'
+
+<span class="c"># off: the same command with "killSwitch":false</span></code></pre>
+
+  <h3>Agent status from the terminal</h3>
+<pre><code>curl -sk -X POST https://localhost:3443/api/registry \
+  -H 'content-type: application/json' -d '{"status":"ACTIVE"}'     <span class="c"># or "REVOKED"</span></code></pre>
+
+  <h3>Full wipe</h3>
+<pre><code><span class="c"># stop npm run dev:https first: it keeps the database open</span>
+rm -f data/safr.db data/safr.db-wal data/safr.db-shm
+npm run keygen             <span class="c"># recreates the file and re-registers the public key from AGENT_PRIVATE_KEY</span>
+npm run dev:https</code></pre>
+  <p>The saved card lived in the deleted file, so click "Add card" again unless <code>REAP_ENROLLMENT_ID</code> is set in <code>.env.local</code>.</p>
+
+  <h3>If the Reap enrollment expired</h3>
+  <p>The panel shows "The link to add your card expired. Please start again." (or the failed or removed variant) with an "Add card" button: add the card again. While a card is still pending, the panel offers "Start again", because each Reap link works only once. If the panel still says "Card ready" but checkouts fail with "Reap could not create the checkout (…), so nothing was charged.", Reap has dropped the card on its side: add a new card; the newest <code>ACTIVE</code> enrollment is the one charged.</p>
+
+  <h3>If you record after 10 Oct 2026</h3>
+  <p>The demo mandate ends at <code>2026-10-10T23:59:59+08:00</code>; after that every purchase is <code>MANDATE_EXPIRED</code>. In the app, use "Edit spending limits" and move "Ends on". To make it stick across resets, change <code>validTo</code> in <code>lib/mandate.demo.json</code> and run <code>npm run reset-demo</code>.</p>
+</section>
+
+<!-- ============================== 10. Troubleshooting ============================== -->
+<section id="troubleshooting" class="runbook">
+  <h2><span class="num">10</span>Troubleshooting</h2>
+  <p class="small">Server logs from <code>npm run dev:https</code> print every Reap request and response (<code>[Reap] request</code>, <code>[Reap] response</code>), plus <code>[agentcart]</code> and <code>[safr]</code> warnings.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th style="width:19%">Symptom</th><th style="width:33%">Cause</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Quote rejected.</strong> The agent says Reap could not price the item.</td>
+          <td>Reap refused the merchant permalink (<code>CHECKOUT_URL_INVALID</code>), or the merchant is unavailable (brewlander.com returns 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code>). The log shows <code>[agentcart] getQuote failed for {sku}: …</code>.</td>
+          <td>On <code>CHECKOUT_URL_INVALID</code> the adapter already retries with <code>items: [{ variantId }]</code>; that path expects Reap's own discovery variant IDs. If both fail, check <code>checkoutUrl</code> and <code>variantId</code> in <code>lib/catalog.json</code> against Reap's merchant sheet. Test one SKU with <code>npx tsx scripts/quote.ts {sku}</code>. A 503 is on Reap's side: use the step 5 fallback line.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Amounts off by 100×.</strong> The book shows S$1079.00 or S$0.11.</td>
+          <td>Reap sends decimal major units (<code>{ "amount": 10.79 }</code>); AgentCart uses integer cents everywhere else. Something read a Reap amount without converting it.</td>
+          <td>Every Reap amount must pass through <code>ReapMoneySchema</code> / <code>toCents</code> in <code>lib/reap/money.ts</code>. <code>npm test</code> covers it ("converts Reap's decimal amounts to integer cents").</td>
+        </tr>
+        <tr>
+          <td><strong>3. returnUrl rejected.</strong> "Checkout returnUrl must be HTTPS (got http://…)", or Add card fails with "Enrollment returnUrl must be HTTPS".</td>
+          <td><code>APP_BASE_URL</code> is <code>http://</code>, or the app is running on plain <code>npm run dev</code>. Reap only accepts HTTPS return URLs; the adapter refuses before calling Reap.</td>
+          <td>Run <code>npm run dev:https</code> with <code>APP_BASE_URL=https://localhost:3443</code> and restart after editing <code>.env.local</code>. No ngrok needed: Reap accepts <code>https://localhost</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Enrollment stuck non-<code>ACTIVE</code>.</strong> "You started adding a card. Finish on Reap…", or <code>npm run enroll</code> prints "Enrollment ended as …" or times out after 10 minutes.</td>
+          <td>Card entry not finished on Reap's page, OTP not entered, or the enrollment failed or expired. Reap rejects emails on reserved test domains such as <code>.test</code>.</td>
+          <td>Finish on Reap's page (OTP <code>456789</code>), then "Check again" (re-reads every pending enrollment from Reap, which can take a few minutes to mark one <code>ACTIVE</code>). Each Reap link works once: if it says the session was used, click "Start again". Keep <code>DEMO_EMAIL=demo@example.com</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Model not calling tools.</strong> Prose answers with no catalog or price cards, or a chat error.</td>
+          <td><code>OPENAI_API_KEY</code> empty (<code>/api/agent</code> answers 503 "The LLM provider is not configured. Set OPENAI_* in .env.local."), a model without tool calling, or a GPT-6 model without <code>reasoning_effort: "none"</code>.</td>
+          <td>Set the key and restart. <code>lib/agent/model.ts</code> adds <code>reasoning_effort: "none"</code> when the model name contains <code>gpt-6</code>. For another provider change <code>OPENAI_BASE_URL</code> and <code>OPENAI_MODEL</code> together, to a model with tool calling.</td>
+        </tr>
+        <tr>
+          <td><strong>6. <code>better-sqlite3</code> build error.</strong> The app or a script fails on first database access.</td>
+          <td>npm skipped install scripts (<code>npm config get ignore-scripts</code> prints <code>true</code>), so the native module was never built.</td>
+          <td><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code>, then check with <code>node -e "new (require('better-sqlite3'))(':memory:')"</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>7. Port busy.</strong> The dev server will not start, or starts somewhere unexpected.</td>
+          <td>An old dev server still holds 3443 (<code>npm run dev:https</code>) or 3000 (<code>npm run dev</code>).</td>
+          <td><code>lsof -iTCP:3443 -sTCP:LISTEN</code> (or <code>:3000</code>) and stop that process. If another server owns <code>localhost:3000</code>, plain <code>npm run dev</code> also works at http://127.0.0.1:3000. If you change the HTTPS port, <code>APP_BASE_URL</code> must match, or Reap sends people to the wrong place.</td>
+        </tr>
+        <tr>
+          <td><strong>8. Chain badge red with no tampering.</strong> "A record was changed" before step 9.</td>
+          <td>The Tamper button was pressed in an earlier take (the edited row stays until reset), or <code>data/safr.db</code> was edited or had rows deleted by hand (deleting a row breaks the chain at the next one). Recording execution status never breaks it; that sits outside the hash.</td>
+          <td><code>npm run reset-demo</code>. To see where it breaks: <code>GET /api/audit</code> returns <code>chain: { ok, length, brokenAtSeq }</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Also check:</strong> <code>npm run dev:https</code> will not start because <code>certificates/localhost.pem</code> or <code>localhost-key.pem</code> is missing or expired (create it with the command in <a href="#setup">setup step 5</a>); every purchase says "The spending mandate is not valid right now" (dates, see <a href="#reset">section 9</a>); every purchase says "could not be verified as coming from this agent" (<code>AGENT_PRIVATE_KEY</code> empty, or the public key not registered after a wipe: run <code>npm run keygen</code> and restart); an Allowed decision ends in "no card has been added yet" (add the card).</p>
+</section>
+
+<!-- ============================== 11. Recording ============================== -->
+<section id="recording" class="runbook">
+  <h2><span class="num">11</span>Recording checklist</h2>
+  <h3>Browser and layout</h3>
+  <ul>
+    <li>The chat and panel sit side by side only when the page is at least 1100 CSS pixels wide; narrower, they stack. At 125% zoom that is a window about 1375 pixels wide. Zoom 110% to 125% for legibility.</li>
+    <li>Chat on the left, SAFR panel on the right (the app does this itself above 1100 pixels). Terminal hidden; do step 7's <code>curl</code> off camera.</li>
+    <li>Use a clean browser profile: no bookmarks bar, extensions or autofill. Turn on Do Not Disturb.</li>
+  </ul>
+  <h3>Keep off screen or blur</h3>
+  <ul>
+    <li><code>REAP_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>AGENT_PRIVATE_KEY</code> (anything showing <code>.env.local</code>).</li>
+    <li>The Reap enrollment ID: <code>npm run enroll</code> output, Reap's pages, server logs.</li>
+    <li>The test card number on Reap's hosted page.</li>
+    <li>Fine to show: envelope hashes, the key fingerprint, Reap checkout and order IDs, the demo email and address.</li>
+  </ul>
+  <h3>Pre-flight</h3>
+  <ul class="check">
+    <li><code>npm run dev:https</code> is running and https://localhost:3443 loads; the certificate warning was already accepted in this browser profile, so it never appears on camera (this replaces "ngrok up").</li>
+    <li><code>DEMO_SIMULATE_WITHOUT_CARD</code> is <code>false</code> (the default) in <code>.env.local</code>.</li>
+    <li>"Card ready" in "01 · Payment card" (enrollment <code>ACTIVE</code>).</li>
+    <li>Keys loaded: header says "Assistant ready"; "Assistant details" shows a signing key fingerprint.</li>
+    <li><code>npm run reset-demo</code> just ran, the browser was reloaded, Activity says "No records yet", Budget left is S$150.00.</li>
+    <li><code>npm test</code> green (66 passed).</li>
+    <li>Clock inside the mandate dates (until 10 Oct 2026 23:59:59 Singapore time).</li>
+    <li>Optional: <code>npm run smoke</code> passes (its own in-memory database, so no reset needed afterwards).</li>
+    <li>One timed dry run done, then <code>npm run reset-demo</code> and reload again before the real take.</li>
+  </ul>
+  <h3>Backup plan if the sandbox is down</h3>
+  <ol>
+    <li>Show <code>npm test</code>: <code>tests/gate.test.ts</code> runs the whole script in order against the in-memory mock adapter (Auto-execute, Escalate then approve, <code>OVER_HARD_CAP</code>, <code>CURRENCY_MISMATCH</code>, <code>CATEGORY_OUT_OF_SCOPE</code>, <code>VELOCITY</code>, identity Deny, broken chain) and asserts the audit row exists before every checkout call.</li>
+    <li>Cut in a take recorded earlier while the sandbox was up.</li>
+    <li>If quotes work but no card can be added: set <code>DEMO_SIMULATE_WITHOUT_CARD=true</code> and restart. Cleared purchases then finish as a simulated checkout (order ID <code>SIMULATED-…</code>, and the gate's message says no Reap order is created and no money moves). Say so on camera, and set it back to <code>false</code> afterwards.</li>
+    <li>There is no offline mode for quotes: the gate and the agent always use the real Reap adapter, and the mock is used only by the tests.</li>
+  </ol>
+</section>
+
+<!-- ============================== 12. References ============================== -->
+<section id="references" class="runbook">
+  <h2><span class="num">12</span>References</h2>
+  <ul>
+    <li>Monetary Authority of Singapore. Safeguards for Agentic Finance at Runtime (SAFR). White paper, version 1.0, July 2026.</li>
+    <li>Reap. Agentic Payments documentation, docs.reap.global/agentic-payments. API version 2025-02-14.</li>
+    <li>Reap × 65labs Agentic Buildathon brief, Singapore, 9 October 2026. Track: Most Worthwhile Problem.</li>
+    <li>In this repository: SETUP.md, NOTES.md (verified Reap behaviour), PITCH.md (90-second pitch), lib/types.ts (shared contract).</li>
+  </ul>
+</section>
+
+<footer class="page-foot">
+  <p>Written against commit <code>5fe4e50</code> (branch <code>lane-a-reap-adapter</code>), 9 Oct 2026. When this page and the code disagree, the code wins.</p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

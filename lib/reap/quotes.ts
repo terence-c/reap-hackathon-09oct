@@ -1,44 +1,50 @@
-import type { CatalogItem, Currency, Quote, ShippingAddress } from "@/lib/types";
+import { z } from "zod";
+import type { CatalogItem, Quote, ShippingAddress } from "@/lib/types";
 import { ReapError, reapFetch } from "./client";
+import { ReapMoneySchema } from "./money";
+import { lookupQuote, recordQuote } from "./quote-store";
 
-type ReapMoney = { amount: number; currency: Currency };
-type QuoteResponse = {
-  id: string;
-  amountBreakdown: {
-    itemsSubtotal: ReapMoney;
-    shipping: ReapMoney;
-    tax: { amount: ReapMoney } | ReapMoney;
-    finalAmount: ReapMoney;
-  };
-  expiresAt: string;
-};
-
-const demoAddress: ShippingAddress = {
-  firstName: "Demo",
-  lastName: "User",
-  phone: "+6590000000",
+// Verified against the sandbox: Reap validates phone as ^\+[1-9]\d{6,14}$ and merchants reject
+// obviously fake numbers, so this is a real-format SG mobile and a real SG postcode.
+export const DEMO_SHIPPING_ADDRESS: ShippingAddress = {
+  firstName: "Agent",
+  lastName: "Cart",
+  phone: "+6591234567",
   addressLine1: "1 Raffles Place",
   city: "Singapore",
   postalCode: "048616",
   country: "SG",
 };
 
-function mapQuote(response: QuoteResponse, merchantDomain: string): Quote {
-  const tax = "amount" in response.amountBreakdown.tax &&
-    typeof response.amountBreakdown.tax.amount === "object"
-    ? response.amountBreakdown.tax.amount
-    : response.amountBreakdown.tax as ReapMoney;
+// Totals are nested under amountBreakdown. Tax is informational (often already included in
+// prices); finalAmount is what gets charged.
+const QuoteResponseSchema = z.object({
+  id: z.string().min(1),
+  amountBreakdown: z.object({
+    itemsSubtotal: ReapMoneySchema,
+    shipping: ReapMoneySchema,
+    tax: z.union([z.object({ amount: ReapMoneySchema }).transform((t) => t.amount), ReapMoneySchema]),
+    finalAmount: ReapMoneySchema,
+  }),
+  expiresAt: z.string(),
+});
+
+function toQuote(raw: unknown, merchantDomain: string): Quote {
+  const parsed = QuoteResponseSchema.safeParse(raw);
+  if (!parsed.success) throw new Error(`Unexpected quote response from Reap: ${parsed.error.issues[0]?.message}`);
+  const { id, amountBreakdown: b, expiresAt } = parsed.data;
   return {
-    id: response.id,
+    id,
     merchantDomain,
-    finalAmount: response.amountBreakdown.finalAmount,
-    itemsSubtotal: response.amountBreakdown.itemsSubtotal,
-    shipping: response.amountBreakdown.shipping,
-    tax,
-    expiresAt: response.expiresAt,
+    finalAmount: b.finalAmount,
+    itemsSubtotal: b.itemsSubtotal,
+    shipping: b.shipping,
+    tax: b.tax,
+    expiresAt,
   };
 }
 
+// The merchant-sheet permalinks are /cart/<variantId>:<qty>; rewrite the quantity in place.
 function quantityUrl(item: CatalogItem, quantity: number): string {
   const url = new URL(item.checkoutUrl);
   const segment = `/cart/${item.variantId}:`;
@@ -58,41 +64,37 @@ export async function createQuote(input: {
   if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) {
     throw new Error("Quote quantity must be a positive integer");
   }
-  const address = input.shippingAddress ?? demoAddress;
-  const body = {
-    externalCheckout: {
-      merchantDomain: input.item.merchantDomain,
-      checkoutUrl: quantityUrl(input.item, input.quantity),
-    },
-    email: input.email,
-    shippingAddress: address,
-  };
-  const idempotencyKey = `quote-${crypto.randomUUID()}`;
+  const { item, quantity, email } = input;
+  const shippingAddress = input.shippingAddress ?? DEMO_SHIPPING_ADDRESS;
+  let raw: unknown;
   try {
-    const response = await reapFetch<QuoteResponse>("/agentic/quotes", {
-      method: "POST", body, idempotencyKey,
-    });
-    return mapQuote(response, input.item.merchantDomain);
-  } catch (error) {
-    // Reap discovery variant IDs are a supported alternative when a merchant permalink is rejected.
-    if (!(error instanceof ReapError) || error.code !== "CHECKOUT_URL_INVALID") throw error;
-    const response = await reapFetch<QuoteResponse>("/agentic/quotes", {
+    raw = await reapFetch("/agentic/quotes", {
       method: "POST",
-      body: {
-        items: [{ variantId: input.item.variantId, quantity: input.quantity }],
-        email: input.email,
-        shippingAddress: address,
-      },
       idempotencyKey: `quote-${crypto.randomUUID()}`,
+      body: {
+        externalCheckout: { merchantDomain: item.merchantDomain, checkoutUrl: quantityUrl(item, quantity) },
+        email,
+        shippingAddress,
+      },
     });
-    return mapQuote(response, input.item.merchantDomain);
+  } catch (error) {
+    // Reap discovery variant IDs are the supported alternative when a merchant permalink is rejected.
+    if (!(error instanceof ReapError) || error.code !== "CHECKOUT_URL_INVALID") throw error;
+    raw = await reapFetch("/agentic/quotes", {
+      method: "POST",
+      idempotencyKey: `quote-${crypto.randomUUID()}`,
+      body: { items: [{ variantId: item.variantId, quantity }], email, shippingAddress },
+    });
   }
+  const quote = toQuote(raw, item.merchantDomain);
+  recordQuote(quote.id, { merchantDomain: item.merchantDomain, sku: item.sku, quantity });
+  return quote;
 }
 
+// Re-reads the live quote from Reap; the merchant comes from our own record of the quote.
 export async function getQuote(id: string): Promise<Quote> {
-  const response = await reapFetch<QuoteResponse>(`/agentic/quotes/${encodeURIComponent(id)}`);
-  // The server-side caller should compare this against its catalog item before authorization.
-  return mapQuote(response, "");
+  const line = lookupQuote(id);
+  if (!line) throw new Error(`Quote ${id} was not created by this app`);
+  const raw = await reapFetch(`/agentic/quotes/${encodeURIComponent(id)}`);
+  return toQuote(raw, line.merchantDomain);
 }
-
-export { demoAddress };

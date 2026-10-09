@@ -5,6 +5,7 @@ import type { Money } from "@/lib/types";
 import { formatMoney, shortHash } from "./format";
 
 export type ApprovalCardProps = {
+  itemName?: string;
   merchantDomain: string;
   amount: Money;
   envelopeHash: string;
@@ -14,6 +15,7 @@ export type ApprovalCardProps = {
 };
 
 export function ApprovalCard({
+  itemName,
   merchantDomain,
   amount,
   envelopeHash,
@@ -42,7 +44,10 @@ export function ApprovalCard({
       <p className="mt-2 font-mono text-[26px] leading-none tracking-tight">
         {formatMoney(amount)}
       </p>
-      <p className="mt-1 text-[13px] text-muted">at {merchantDomain}</p>
+      <p className="mt-1 text-[13px] text-muted">
+        {itemName ? `${itemName} at ` : "at "}
+        {merchantDomain}
+      </p>
       <p className="mt-2 font-mono text-[10px] text-muted">
         Record {shortHash(envelopeHash)} ·{" "}
         {remainingMs > 0
@@ -67,9 +72,9 @@ export function ApprovalCard({
           Decline
         </button>
       </div>
-      {disabled && (
+      {remainingMs === 0 && (
         <p className="mt-2 text-[11px] text-orange">
-          Approving purchases is not available in this demo.
+          Time is up. This request will be cancelled and nothing will be bought.
         </p>
       )}
     </div>

@@ -1,28 +1,24 @@
 import "./load-env";
 import type { CatalogItem } from "../lib/types";
 import { env } from "../lib/env";
+import { activeEnrollmentId } from "../lib/reap/enrollments";
 import { createCheckout, pollCheckout } from "../lib/reap/checkouts";
-import { createQuote, demoAddress } from "../lib/reap/quotes";
+import catalog from "../lib/catalog.json";
+import { createQuote, DEMO_SHIPPING_ADDRESS } from "../lib/reap/quotes";
 import { reapFetch } from "../lib/reap/client";
 
 type Enrollment = { id: string; status: string };
 
 async function main() {
-  const enrollmentId = env.REAP_ENROLLMENT_ID;
+  const enrollmentId = activeEnrollmentId();
   if (!enrollmentId) throw new Error("Set REAP_ENROLLMENT_ID after completing npm run enroll");
   const enrollment = await reapFetch<Enrollment>(`/agentic/enrollments/${encodeURIComponent(enrollmentId)}`);
   if (enrollment.status !== "ACTIVE") throw new Error(`Enrollment is ${enrollment.status}; expected ACTIVE`);
 
-  const item: CatalogItem = {
-    sku: "ugreen-wireless-mouse",
-    merchantDomain: "ugreen.com.sg",
-    name: "UGREEN wireless mouse",
-    category: "Electronics",
-    unitPrice: { amount: 3299, currency: "SGD" },
-    checkoutUrl: "https://ugreen.com.sg/cart/51210551099639:1?attributes[click_id]=agentcart",
-    variantId: "51210551099639",
-  };
-  const quote = await createQuote({ item, quantity: 1, email: env.DEMO_EMAIL, shippingAddress: demoAddress });
+  const sku = process.argv[2] ?? "popular-ghost-stories-12";
+  const item = (catalog as CatalogItem[]).find((i) => i.sku === sku);
+  if (!item) throw new Error(`No catalog item ${sku}`);
+  const quote = await createQuote({ item, quantity: 1, email: env.DEMO_EMAIL, shippingAddress: DEMO_SHIPPING_ADDRESS });
   console.log("Quote:", JSON.stringify({ id: quote.id, finalAmount: quote.finalAmount }));
 
   const checkout = await createCheckout({

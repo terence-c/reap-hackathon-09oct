@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:https": "next dev --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem --port 3443",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "enroll": "tsx scripts/enroll.ts",
     "e2e": "tsx scripts/e2e.ts",
+    "smoke": "tsx scripts/smoke-demo.ts",
+    "reset-demo": "tsx scripts/reset-demo.ts",
     "keygen": "tsx scripts/keygen.ts"
   },
   "dependencies": {

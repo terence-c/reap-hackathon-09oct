@@ -8,7 +8,9 @@ export function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   try {
-    return new URL(origin).origin === request.nextUrl.origin;
+    // Compare against the Host the browser actually used (localhost vs 127.0.0.1 both work).
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    return !!host && new URL(origin).host === host;
   } catch {
     return false;
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Currency, Mandate } from "@/lib/types";
-import { patchStubState } from "@/lib/agent/state-client";
+import { patchAgentState } from "@/lib/agent/state-client";
 import { formatMoney, localInputToIso, plainText, toLocalInput } from "./format";
 
 type Draft = {
@@ -85,7 +85,7 @@ function MandateEditorDrawer({
     setStatus("saving");
     setError("");
     try {
-      await patchStubState({
+      await patchAgentState({
         action: "updateMandate",
         mandate: {
           currency: draft.currency,
@@ -266,7 +266,7 @@ function MandateEditorDrawer({
           )}
           {status === "saved" && (
             <p role="status" className="mb-2 text-[13px] text-teal">
-              Your spending limits have been saved for this demo.
+              Your spending limits have been saved. The next purchase is checked against them.
             </p>
           )}
           <button

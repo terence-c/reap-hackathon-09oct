@@ -5,7 +5,7 @@ import { DefaultChatTransport, isToolUIPart } from "ai";
 import { useEffect, useRef, useState } from "react";
 import catalogJson from "@/lib/catalog.json";
 import type { CatalogItem } from "@/lib/types";
-import { fetchStubState, type StubStateResponse } from "@/lib/agent/state-client";
+import { fetchAgentState, type AgentStateResponse } from "@/lib/agent/state-client";
 import { formatMoney, plainText } from "./format";
 import { GovernancePanel } from "./governance-panel";
 import { ToolPart } from "./tool-part";
@@ -21,12 +21,13 @@ const QUICK_PROMPTS: {
   label: string;
   tile: string;
 }[] = [
+  // The demo script, in order: allowed, needs approval, over budget, wrong currency, wrong category, repeat.
   { icon: "book", prompt: "Buy the True Singapore Ghost Stories Book 12", sku: "popular-ghost-stories-12", label: "Ghost Stories, Book 12", tile: "bg-lavender text-violet" },
   { icon: "tag", prompt: "Buy the Wabisabi Luggage Tag", sku: "byndartisan-luggage-tag", label: "Wabisabi luggage tag", tile: "bg-peach text-orange" },
   { icon: "table", prompt: "Buy the Geometry 12 Custom Table", sku: "picketandrail-geometry-table", label: "Geometry custom table", tile: "bg-mint text-teal" },
-  { icon: "stand", prompt: "Buy a laptop stand", sku: "zmdesktop-laptop-stand", label: "Modular laptop stand", tile: "bg-sky text-blue" },
-  { icon: "bottle", prompt: "Buy a beer 6-pack", sku: "brewlander-6pack", label: "SG LAHger, 6-pack", tile: "bg-rose text-red" },
-  { icon: "repeat", prompt: "Buy that book again", sku: "popular-ghost-stories-12", label: "The book, again", tile: "bg-butter text-orange" },
+  { icon: "stand", prompt: "Buy the Modular Space-Saving Laptop Stand", sku: "zmdesktop-laptop-stand", label: "Modular laptop stand", tile: "bg-sky text-blue" },
+  { icon: "bottle", prompt: "Buy the SG LAHger beer 6-pack", sku: "brewlander-6pack", label: "SG LAHger, 6-pack", tile: "bg-rose text-red" },
+  { icon: "repeat", prompt: "Buy the True Singapore Ghost Stories Book 12 again", sku: "popular-ghost-stories-12", label: "Ghost Stories book, again", tile: "bg-butter text-orange" },
 ];
 
 const transport = new DefaultChatTransport({ api: "/api/agent" });
@@ -34,14 +35,14 @@ const transport = new DefaultChatTransport({ api: "/api/agent" });
 export function Workspace() {
   const { messages, sendMessage, status, error } = useChat({ transport });
   const [input, setInput] = useState("");
-  const [state, setState] = useState<StubStateResponse | null>(null);
+  const [state, setState] = useState<AgentStateResponse | null>(null);
   const [stateError, setStateError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   async function refreshState() {
     try {
-      setState(await fetchStubState());
+      setState(await fetchAgentState());
       setStateError(null);
     } catch (e) {
       setStateError(e instanceof Error ? e.message : "state refresh failed");
@@ -62,7 +63,7 @@ export function Workspace() {
   }, [messages]);
 
   const busy = status === "submitted" || status === "streaming";
-  const agentActive = state ? !state.mandate.killSwitch : null;
+  const agentActive = state ? state.registry.status === "active" : null;
   const empty = messages.length === 0;
 
   function send(text: string) {
@@ -94,7 +95,7 @@ export function Workspace() {
                   : "Assistant paused"}
             </span>
             <span className="ac-label rounded-full border border-line bg-white px-2.5 py-1 text-muted">
-              Demo only
+              Reap sandbox
             </span>
           </div>
         </header>
@@ -112,7 +113,7 @@ export function Workspace() {
               purchase.
             </p>
             <p className="mt-2 text-[11px] text-muted">
-              Demo only. No orders or payments are made.
+              Reap sandbox. No real money moves.
             </p>
           </div>
           <ol className="flex items-center gap-0 text-[12px]" aria-label="How it works">
