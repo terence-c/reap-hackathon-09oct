@@ -4,7 +4,7 @@
 1. Permalinks as externalCheckout.checkoutUrl in sandbox? →
 2. Test card for hosted EXTERNAL enrollment page? →
 3. returnUrl rules (HTTPS / allowlist)? →
-4. Exact sandbox host + Reap-Version value →
+4. Exact sandbox host + Reap-Version value → host: https://sg.sandbox.api.reap.global · Reap-Version: ?
 
 ## Running URLs
 - ngrok: 
