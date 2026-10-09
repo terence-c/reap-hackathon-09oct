@@ -174,17 +174,7 @@ function DecisionResult({ output }: { output?: Record<string, unknown> }) {
       </div>
       <div className="px-3 py-2.5 text-[13px]">
         <p className="text-ink">{plainText(message)}</p>
-        {approvalUrl?.startsWith("https://") && (
-          <a
-            href={approvalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
-          >
-            Review on Reap
-          </a>
-        )}
-        {checkoutId && <OrderStatus checkoutId={checkoutId} />}
+        {checkoutId && <OrderStatus checkoutId={checkoutId} approvalUrl={approvalUrl} />}
         {envelopeHash && (
           <details className="mt-2">
             <summary className="ac-focus-ring cursor-pointer rounded text-[11px] text-muted">
@@ -215,7 +205,7 @@ type CheckoutStatusResponse = {
 };
 
 type OrderView =
-  | { phase: "waiting" }
+  | { phase: "waiting"; status?: CheckoutStatus; orderId?: string }
   | { phase: "final"; status: "COMPLETED" | "FAILED" | "EXPIRED"; orderId?: string; finalAmount?: Money }
   | { phase: "unknown" };
 
@@ -223,7 +213,8 @@ const FINAL_STATUSES = new Set<CheckoutStatus>(["COMPLETED", "FAILED", "EXPIRED"
 const POLL_MS = 2000;
 const MAX_POLLS = 150; // about 5 minutes, long enough to confirm on Reap's page
 
-export function OrderStatus({ checkoutId }: { checkoutId: string }) {
+// Reap approval links work once, so "Review on Reap" shows only while Reap still needs approval.
+export function OrderStatus({ checkoutId, approvalUrl }: { checkoutId: string; approvalUrl?: string }) {
   const [view, setView] = useState<OrderView>({ phase: "waiting" });
 
   useEffect(() => {
@@ -249,6 +240,7 @@ export function OrderStatus({ checkoutId }: { checkoutId: string }) {
             });
             return;
           }
+          setView({ phase: "waiting", status: data.status, orderId: data.orderId });
         }
       } catch {
         // Network hiccup: keep waiting until the poll budget runs out.
@@ -269,15 +261,32 @@ export function OrderStatus({ checkoutId }: { checkoutId: string }) {
   }, [checkoutId]);
 
   if (view.phase === "waiting") {
+    const needsApproval = view.status === undefined || view.status === "REQUIRES_ACTION";
     return (
-      <p
-        role="status"
-        aria-live="polite"
-        className="mt-2 flex items-center gap-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[12px] text-blue"
-      >
-        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue" aria-hidden="true" />
-        Waiting for Reap...
-      </p>
+      <>
+        {needsApproval && approvalUrl?.startsWith("https://") && (
+          <a
+            href={approvalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
+          >
+            Review on Reap
+          </a>
+        )}
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-2 flex items-center gap-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[12px] text-blue"
+        >
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue" aria-hidden="true" />
+          {view.status === "PROCESSING"
+            ? `Payment approved. Reap is placing the order with the merchant${view.orderId ? ` (reference ${view.orderId})` : ""}.`
+            : needsApproval && approvalUrl
+              ? "Waiting for your approval on Reap's page..."
+              : "Waiting for Reap..."}
+        </p>
+      </>
     );
   }
   if (view.phase === "unknown") {

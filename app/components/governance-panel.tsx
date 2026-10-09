@@ -527,17 +527,9 @@ export function GovernancePanel({
                   <div className="mt-1.5 space-y-1.5">
                     <DecisionBadge decision={answer.result.decision} />
                     <p className="text-ink">{plainText(answer.result.message)}</p>
-                    {answer.result.approvalUrl?.startsWith("https://") && (
-                      <a
-                        href={answer.result.approvalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ac-focus-ring inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
-                      >
-                        Review on Reap
-                      </a>
+                    {answer.result.checkoutId && (
+                      <OrderStatus checkoutId={answer.result.checkoutId} approvalUrl={answer.result.approvalUrl} />
                     )}
-                    {answer.result.checkoutId && <OrderStatus checkoutId={answer.result.checkoutId} />}
                   </div>
                 ) : null}
               </li>

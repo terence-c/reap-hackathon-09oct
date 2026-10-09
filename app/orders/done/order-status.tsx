@@ -17,7 +17,7 @@ type CheckoutReply = {
 };
 
 type View =
-  | { kind: "waiting"; status?: CheckoutStatus }
+  | { kind: "waiting"; status?: CheckoutStatus; orderId?: string }
   | { kind: "retrying" }
   | { kind: "completed"; orderId?: string; finalAmount?: Money }
   | { kind: "ended"; status: "FAILED" | "EXPIRED" }
@@ -53,7 +53,7 @@ export function OrderStatus({ envelopeHash, checkoutId }: { envelopeHash?: strin
           return setView({ kind: "completed", orderId: data.orderId, finalAmount: data.finalAmount });
         }
         if (data.status === "FAILED" || data.status === "EXPIRED") return setView({ kind: "ended", status: data.status });
-        setView({ kind: "waiting", status: data.status });
+        setView({ kind: "waiting", status: data.status, orderId: data.orderId });
         again();
       } catch {
         if (stopped) return;
@@ -105,6 +105,12 @@ export function OrderStatus({ envelopeHash, checkoutId }: { envelopeHash?: strin
         </StatusCard>
       );
     case "waiting":
+      if (view.status === "PROCESSING")
+        return (
+          <StatusCard tone="waiting" label="Payment approved" title="Reap is placing your order...">
+            {`The payment is approved and the merchant is placing the order${view.orderId ? ` (reference ${view.orderId})` : ""}. This page updates by itself once Reap confirms it.`}
+          </StatusCard>
+        );
       return (
         <StatusCard tone="waiting" label="Checking" title="Waiting for Reap to confirm...">
           {view.status === "REQUIRES_ACTION"
