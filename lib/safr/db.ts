@@ -12,7 +12,6 @@ import demoMandate from "../mandate.demo.json";
 export type DB = Database.Database;
 
 export const DB_PATH = path.join(process.cwd(), "data", "safr.db");
-export const SYSTEM_PROMPT_PATH = path.join(process.cwd(), "lib", "agent", "system-prompt.ts");
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS agents (
@@ -80,9 +79,11 @@ CREATE TABLE IF NOT EXISTS tool_calls (
 `;
 
 // sha256 of C's system prompt source. "unregistered" until lib/agent/system-prompt.ts exists.
-export function computePromptHash(file = SYSTEM_PROMPT_PATH): string {
-  if (!existsSync(file)) return "unregistered";
-  return createHash("sha256").update(readFileSync(file)).digest("hex");
+// The path is written inline so Turbopack can scope its file tracing to that one file.
+export function computePromptHash(): string {
+  if (!existsSync(path.join(process.cwd(), "lib", "agent", "system-prompt.ts"))) return "unregistered";
+  const source = readFileSync(path.join(process.cwd(), "lib", "agent", "system-prompt.ts"));
+  return createHash("sha256").update(source).digest("hex");
 }
 
 function seed(db: DB) {
