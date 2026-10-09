@@ -1,0 +1,56 @@
+[
+  {
+    "sku": "ugreen-mouse",
+    "merchantDomain": "ugreen.com.sg",
+    "name": "UGREEN dual mode Bluetooth + 2.4GHz wireless mouse 4000 DPI",
+    "category": "Computers & Electronics",
+    "unitPrice": { "amount": 3299, "currency": "SGD" },
+    "checkoutUrl": "https://ugreen.com.sg/cart/51210551099639:1?attributes[click_id]=agentcart",
+    "variantId": "51210551099639"
+  },
+  {
+    "sku": "anker-hub",
+    "merchantDomain": "anker.com.sg",
+    "name": "Anker Nano USB-C hub 8-in-1 dual display 85W",
+    "category": "Computers & Electronics",
+    "unitPrice": { "amount": 7290, "currency": "SGD" },
+    "checkoutUrl": "https://anker.com.sg/cart/52786047254813:1?attributes[click_id]=agentcart",
+    "variantId": "52786047254813"
+  },
+  {
+    "sku": "prism-monitor",
+    "merchantDomain": "prismplus.sg",
+    "name": "PRISM+ W290U monitor",
+    "category": "Computers & Electronics",
+    "unitPrice": { "amount": 19900, "currency": "SGD" },
+    "checkoutUrl": "https://prismplus.sg/cart/49520064692451:1?attributes[click_id]=agentcart",
+    "variantId": "49520064692451"
+  },
+  {
+    "sku": "ergotune-pegboard",
+    "merchantDomain": "ergotune.com",
+    "name": "F-Clamp pegboard panel - black",
+    "category": "Office & Business Supplies",
+    "unitPrice": { "amount": 5900, "currency": "SGD" },
+    "checkoutUrl": "https://ergotune.com/cart/51986214289774:1?attributes[click_id]=agentcart",
+    "variantId": "51986214289774"
+  },
+  {
+    "sku": "boxgreen-snacks",
+    "merchantDomain": "boxgreen.co",
+    "name": "The Trio big bag of snacks",
+    "category": "Office & Business Supplies",
+    "unitPrice": { "amount": 5000, "currency": "SGD" },
+    "checkoutUrl": "https://www.boxgreen.co/cart/46221035503660:1?attributes[click_id]=agentcart",
+    "variantId": "46221035503660"
+  },
+  {
+    "sku": "brewlander-6pack",
+    "merchantDomain": "brewlander.com",
+    "name": "SG LAHger 6-pack",
+    "category": "Drinks & Alcohol",
+    "unitPrice": { "amount": 3300, "currency": "SGD" },
+    "checkoutUrl": "https://www.brewlander.com/cart/51386875740481:1?attributes[click_id]=agentcart",
+    "variantId": "51386875740481"
+  }
+]
