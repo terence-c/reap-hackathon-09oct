@@ -1,6 +1,7 @@
 import "./load-env";
 import type { CatalogItem } from "../lib/types";
 import { env } from "../lib/env";
+import { activeEnrollmentId } from "../lib/reap/enrollments";
 import { createCheckout, pollCheckout } from "../lib/reap/checkouts";
 import catalog from "../lib/catalog.json";
 import { createQuote, DEMO_SHIPPING_ADDRESS } from "../lib/reap/quotes";
@@ -9,7 +10,7 @@ import { reapFetch } from "../lib/reap/client";
 type Enrollment = { id: string; status: string };
 
 async function main() {
-  const enrollmentId = env.REAP_ENROLLMENT_ID;
+  const enrollmentId = activeEnrollmentId();
   if (!enrollmentId) throw new Error("Set REAP_ENROLLMENT_ID after completing npm run enroll");
   const enrollment = await reapFetch<Enrollment>(`/agentic/enrollments/${encodeURIComponent(enrollmentId)}`);
   if (enrollment.status !== "ACTIVE") throw new Error(`Enrollment is ${enrollment.status}; expected ACTIVE`);

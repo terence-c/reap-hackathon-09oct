@@ -6,6 +6,7 @@
 import "./load-env";
 import catalog from "../lib/catalog.json";
 import { env } from "../lib/env";
+import { activeEnrollmentId } from "../lib/reap/enrollments";
 import { reapAdapter } from "../lib/reap";
 import { DEMO_SHIPPING_ADDRESS } from "../lib/reap/quotes";
 import * as audit from "../lib/safr/audit";
@@ -34,7 +35,7 @@ async function settle(result: ProposeCheckoutResult): Promise<string> {
 
 async function main() {
   if (!env.AGENT_PRIVATE_KEY) throw new Error("AGENT_PRIVATE_KEY is empty: run npm run keygen");
-  if (!env.REAP_ENROLLMENT_ID) throw new Error("REAP_ENROLLMENT_ID is empty: run npm run enroll");
+  if (!activeEnrollmentId()) throw new Error("No ACTIVE card: use Add card in the app or npm run enroll");
 
   openInMemoryDb();
   registerPublicKey(env.AGENT_ID, publicKeyFromPrivate(env.AGENT_PRIVATE_KEY));

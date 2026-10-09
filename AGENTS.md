@@ -36,6 +36,7 @@ Shared, read-only for everyone except B: `lib/types.ts`. Shared notes: `NOTES.md
 npm install
 cp .env.example .env.local   # then fill it in
 npm run dev                  # http://localhost:3000
+npm run dev:https            # local HTTPS on https://localhost:3443 (Reap needs HTTPS return URLs)
 npm test                     # vitest
 npm run keygen               # Role B: Ed25519 agent keypair
 npm run enroll               # Role A: create EXTERNAL enrollment, open hosted page, wait for ACTIVE
