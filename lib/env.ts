@@ -12,8 +12,10 @@ const withDefault = (value: string) => z.preprocess(blank, z.string().default(va
 const urlWithDefault = (value: string) => z.preprocess(blank, z.string().url().default(value));
 
 const appSchema = z.object({
-  APP_BASE_URL: urlWithDefault("http://localhost:3000"),
-  DEMO_EMAIL: withDefault("demo@agentcart.test"),
+  // Reap only accepts HTTPS return URLs; `npm run dev:https` serves https://localhost:3443.
+  APP_BASE_URL: urlWithDefault("https://localhost:3443"),
+  // Reap rejects reserved test domains like .test; example.com is accepted and never delivers mail.
+  DEMO_EMAIL: withDefault("demo@example.com"),
   AGENT_ID: withDefault("purchasing-agent-v1"),
   AGENT_PRIVATE_KEY: optional,
   // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.
@@ -26,6 +28,8 @@ const reapSchema = z.object({
   REAP_BASE_URL: urlWithDefault("https://sg.sandbox.api.reap.global"),
   REAP_API_VERSION: withDefault("2025-02-14"),
   REAP_ENROLLMENT_ID: optional,
+  // Sandbox only: send X-Simulate-Checkout: COMPLETED so checkouts complete without the hosted approval step.
+  REAP_SIMULATE_CHECKOUT: z.preprocess(blank, z.enum(["true", "false"]).default("true")),
 });
 
 const llmSchema = z.object({
@@ -64,6 +68,9 @@ export const env = {
   },
   get REAP_ENROLLMENT_ID(): string | undefined {
     return reap().REAP_ENROLLMENT_ID;
+  },
+  get REAP_SIMULATE_CHECKOUT(): boolean {
+    return reap().REAP_SIMULATE_CHECKOUT === "true";
   },
   get OPENAI_API_KEY(): string {
     return llm().OPENAI_API_KEY;

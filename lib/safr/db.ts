@@ -68,6 +68,14 @@ CREATE TABLE IF NOT EXISTS approvals (
   expires_at INTEGER NOT NULL,
   decided_at INTEGER
 );
+-- Reap quotes don't echo the merchant back, so lib/reap records what each quote is for.
+CREATE TABLE IF NOT EXISTS reap_quotes (
+  quote_id TEXT PRIMARY KEY,
+  merchant_domain TEXT NOT NULL,
+  sku TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tool_calls (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER NOT NULL,

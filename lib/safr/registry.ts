@@ -125,3 +125,19 @@ export function listToolDenials(limit = 50): ToolDenial[] {
     .all(limit) as { ts: number; session_id: string; agent_id: string; tool: string }[];
   return rows.map((r) => ({ ts: new Date(r.ts).toISOString(), sessionId: r.session_id, agentId: r.agent_id, tool: r.tool }));
 }
+
+// Every tool call, allowed or denied, oldest first — the activity feed in C's panel.
+export type ToolEvent = { seq: number; ts: string; type: "TOOL_CALL" | "TOOL_DENIED"; agentId: string; toolName: string };
+
+export function listToolEvents(limit = 200): ToolEvent[] {
+  const rows = db()
+    .prepare(`SELECT id, ts, agent_id, tool, allowed FROM tool_calls ORDER BY id DESC LIMIT ?`)
+    .all(limit) as { id: number; ts: number; agent_id: string; tool: string; allowed: number }[];
+  return rows.reverse().map((r) => ({
+    seq: r.id,
+    ts: new Date(r.ts).toISOString(),
+    type: r.allowed ? "TOOL_CALL" : "TOOL_DENIED",
+    agentId: r.agent_id,
+    toolName: r.tool,
+  }));
+}

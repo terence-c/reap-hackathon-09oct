@@ -1,27 +1,29 @@
-import type { Checkout, CheckoutStatus, Currency } from "@/lib/types";
+import { z } from "zod";
+import type { Checkout } from "@/lib/types";
 import { env } from "@/lib/env";
 import { reapFetch } from "./client";
+import { ReapMoneySchema } from "./money";
 
-type CheckoutResponse = {
-  id: string;
-  status: CheckoutStatus;
-  orderId?: string | null;
-  finalAmount?: { amount: number; currency: Currency } | null;
-  amount?: { amount: number; currency: Currency };
-  nextAction?: { url?: string; expiresAt?: string } | null;
-};
+const CheckoutResponseSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(["REQUIRES_ACTION", "PROCESSING", "COMPLETED", "FAILED", "EXPIRED"]),
+  orderId: z.string().nullish(),
+  finalAmount: ReapMoneySchema.nullish(),
+  amount: ReapMoneySchema.nullish(),
+  nextAction: z.object({ url: z.string().optional(), expiresAt: z.string().optional() }).nullish(),
+});
 
-function mapCheckout(response: CheckoutResponse): Checkout {
+function toCheckout(raw: unknown): Checkout {
+  const parsed = CheckoutResponseSchema.safeParse(raw);
+  if (!parsed.success) throw new Error(`Unexpected checkout response from Reap: ${parsed.error.issues[0]?.message}`);
+  const c = parsed.data;
+  const finalAmount = c.finalAmount ?? c.amount;
   return {
-    id: response.id,
-    status: response.status,
-    ...(response.orderId ? { orderId: response.orderId } : {}),
-    ...(response.finalAmount ?? response.amount
-      ? { finalAmount: response.finalAmount ?? response.amount! }
-      : {}),
-    ...(response.nextAction?.url
-      ? { nextAction: { url: response.nextAction.url, expiresAt: response.nextAction.expiresAt ?? "" } }
-      : {}),
+    id: c.id,
+    status: c.status,
+    ...(c.orderId ? { orderId: c.orderId } : {}),
+    ...(finalAmount ? { finalAmount } : {}),
+    ...(c.nextAction?.url ? { nextAction: { url: c.nextAction.url, expiresAt: c.nextAction.expiresAt ?? "" } } : {}),
   };
 }
 
@@ -31,14 +33,11 @@ export async function createCheckout(input: {
   returnUrl: string;
   idempotencyKey: string;
 }): Promise<Checkout> {
-  const returnUrl = new URL(input.returnUrl);
-  if (returnUrl.protocol !== "https:" && process.env.NODE_ENV === "production") {
-    throw new Error("Reap hosted checkout returnUrl must use HTTPS in production");
+  // Reap rejects non-HTTPS return URLs (422). Locally, run `npm run dev:https` (https://localhost:3443).
+  if (new URL(input.returnUrl).protocol !== "https:") {
+    throw new Error(`Checkout returnUrl must be HTTPS (got ${input.returnUrl}); set APP_BASE_URL and use npm run dev:https`);
   }
-  if (returnUrl.protocol !== "https:" && !input.returnUrl.startsWith("http://localhost")) {
-    throw new Error("Checkout returnUrl must use HTTPS (or localhost during local development)");
-  }
-  const response = await reapFetch<CheckoutResponse>("/agentic/checkouts", {
+  const raw = await reapFetch("/agentic/checkouts", {
     method: "POST",
     body: {
       quoteId: input.quoteId,
@@ -46,16 +45,16 @@ export async function createCheckout(input: {
       presentation: { type: "REDIRECT", returnUrl: input.returnUrl },
     },
     idempotencyKey: input.idempotencyKey,
-    simulateCheckout: env.REAP_BASE_URL.includes("sandbox"),
+    simulateCheckout: env.REAP_SIMULATE_CHECKOUT && env.REAP_BASE_URL.includes("sandbox"),
   });
-  return mapCheckout(response);
+  return toCheckout(raw);
 }
 
 export async function getCheckout(id: string): Promise<Checkout> {
-  const response = await reapFetch<CheckoutResponse>(`/agentic/checkouts/${encodeURIComponent(id)}`);
-  return mapCheckout(response);
+  return toCheckout(await reapFetch(`/agentic/checkouts/${encodeURIComponent(id)}`));
 }
 
+// Resolves only on a final status. REQUIRES_ACTION / PROCESSING keep polling.
 export async function pollCheckout(
   id: string,
   opts: { intervalMs?: number; timeoutMs?: number } = {},
@@ -71,5 +70,5 @@ export async function pollCheckout(
     }
     await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, Math.max(0, deadline - Date.now()))));
   }
-  throw new Error(`Checkout ${id} did not reach a terminal status within ${timeoutMs}ms (last: ${current?.status ?? "unknown"})`);
+  throw new Error(`Checkout ${id} did not reach a final status within ${timeoutMs}ms (last: ${current?.status ?? "unknown"})`);
 }

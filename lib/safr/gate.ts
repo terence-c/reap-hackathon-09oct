@@ -39,6 +39,7 @@ import { db } from "./db";
 import { checkIdentity, dispose, formatMoney } from "./disposition";
 import { buildEnvelope, canonicalize, deriveQuantity, findCatalogItem, signEnvelope, verifyEnvelope } from "./envelope";
 import { getAgent, toolTraceFor, type AgentRecord } from "./registry";
+import { DEMO_SHIPPING_ADDRESS } from "../reap/quotes";
 import { reapAdapter } from "./reap-adapter";
 
 export const APPROVAL_WINDOW_MS = 5 * 60 * 1000;
@@ -56,16 +57,7 @@ const CatalogSchema = z.array(
 );
 export const CATALOG: CatalogItem[] = CatalogSchema.parse(catalogJson);
 
-// Only used to re-quote an expired quote when a human approves late. Keep in step with A's demo address.
-export const DEMO_SHIPPING_ADDRESS: ShippingAddress = {
-  firstName: "Agent",
-  lastName: "Cart",
-  phone: "+6591234567",
-  addressLine1: "1 Raffles Place",
-  city: "Singapore",
-  postalCode: "048616",
-  country: "SG",
-};
+export { DEMO_SHIPPING_ADDRESS };
 
 const ProposeInputSchema = z.object({
   quoteId: z.string().min(1),

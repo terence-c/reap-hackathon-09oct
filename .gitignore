@@ -70,3 +70,6 @@ next-env.d.ts
 # not shared via git
 package-lock.json
 /TODO-*.md
+
+# next dev --experimental-https (mkcert) local certs
+/certificates/

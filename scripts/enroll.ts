@@ -12,14 +12,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
   if (!env.APP_BASE_URL.startsWith("https://")) {
-    throw new Error("APP_BASE_URL must be an HTTPS URL for Reap hosted enrollment; set it to your ngrok URL first.");
+    throw new Error("APP_BASE_URL must be an HTTPS URL for Reap hosted enrollment; run `npm run dev:https` and set APP_BASE_URL=https://localhost:3443.");
   }
   const enrollment = await reapFetch<Enrollment>("/agentic/enrollments", {
     method: "POST",
     idempotencyKey: `agentcart-enroll-${crypto.randomUUID()}`,
     body: {
       source: "EXTERNAL",
-      owner: { type: "CLIENT_REFERENCE", id: "demo-user-001", email: "demo@agentcart.test" },
+      owner: { type: "CLIENT_REFERENCE", id: "demo-user-001", email: env.DEMO_EMAIL },
       presentation: { type: "REDIRECT", returnUrl: `${env.APP_BASE_URL}/orders/enrollment-done` },
     },
   });
