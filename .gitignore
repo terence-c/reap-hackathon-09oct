@@ -66,3 +66,7 @@ next-env.d.ts
 
 # personal AI-agent settings
 .claude/settings.local.json
+
+# not shared via git
+package-lock.json
+/TODO-*.md
