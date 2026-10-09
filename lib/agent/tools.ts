@@ -2,6 +2,7 @@
 // proposeCheckout only asks the SAFR gate, which alone decides and, if allowed, calls Reap.
 
 import { tool } from "ai";
+import { formatMoney } from "@/lib/safr/disposition";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import catalogJson from "@/lib/catalog.json";
@@ -50,8 +51,9 @@ export function createAgentTools(ctx: ToolContext) {
             });
             return {
               quote,
+              total: formatMoney(quote.finalAmount),
               item: { sku: item.sku, name: item.name, unitPrice: item.unitPrice },
-              note: "Amounts are integer cents. Show the full quoted price, including delivery and tax, in its original currency before asking for permission.",
+              note: `Amounts are integer cents. The total to pay is ${formatMoney(quote.finalAmount)} (quote.finalAmount). Delivery and tax are already included in it: never add them again. Show this total, then call proposeCheckout if the user wants to buy.`,
             };
           } catch (error) {
             const detail =

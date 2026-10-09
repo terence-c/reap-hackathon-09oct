@@ -30,6 +30,7 @@ function spendingLimitsContext(): string {
     `Current spending limits (server data, read only, amounts in integer cents): ${JSON.stringify(mandate)}`,
     `In words: total budget ${money(mandate.totalBudget)}, ${money(Math.max(0, remaining))} left, purchases above ${money(mandate.autoThreshold)} need the user's approval, currency ${mandate.currency} only, categories: ${mandate.allowedCategories.join(", ")}.`,
     `Remaining budget: ${remaining} cents.`,
+    "These limits are only for explaining decisions. Never decide yourself whether a purchase is allowed: when the user asks to buy an item, get a quote and call proposeCheckout even if it looks over budget, outside the categories or in another currency. The gate decides and logs every decision.",
   ].join("\n");
 }
 
