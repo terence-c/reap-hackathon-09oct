@@ -1,5 +1,5 @@
 // Typed, validated env. Import `env` from here; never read process.env or hardcode the Reap host.
-// REAP_* and ANTHROPIC_API_KEY are validated lazily (on first access) so `npm run dev` boots
+// REAP_* and OPENAI_API_KEY are validated lazily (on first access) so `npm run dev` boots
 // before the keys are filled in. Everything else is validated once, at import.
 
 import { z } from "zod";
@@ -16,6 +16,9 @@ const appSchema = z.object({
   DEMO_EMAIL: withDefault("demo@agentcart.test"),
   AGENT_ID: withDefault("purchasing-agent-v1"),
   AGENT_PRIVATE_KEY: optional,
+  // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.
+  OPENAI_BASE_URL: urlWithDefault("https://api.openai.com/v1"),
+  OPENAI_MODEL: withDefault("gpt-4o-mini"),
 });
 
 const reapSchema = z.object({
@@ -26,7 +29,7 @@ const reapSchema = z.object({
 });
 
 const llmSchema = z.object({
-  ANTHROPIC_API_KEY: required,
+  OPENAI_API_KEY: required,
 });
 
 function parse<T extends z.ZodTypeAny>(schema: T): z.infer<T> {
@@ -62,7 +65,7 @@ export const env = {
   get REAP_ENROLLMENT_ID(): string | undefined {
     return reap().REAP_ENROLLMENT_ID;
   },
-  get ANTHROPIC_API_KEY(): string {
-    return llm().ANTHROPIC_API_KEY;
+  get OPENAI_API_KEY(): string {
+    return llm().OPENAI_API_KEY;
   },
 };
