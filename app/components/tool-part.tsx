@@ -1,4 +1,7 @@
-import type { CatalogItem, Decision, Money, Quote } from "@/lib/types";
+"use client";
+
+import { useEffect, useState } from "react";
+import type { CatalogItem, CheckoutStatus, Decision, Money, Quote } from "@/lib/types";
 import { formatMoney, plainText, shortHash } from "./format";
 
 export const DECISION_LABELS: Record<Decision, string> = {
@@ -161,6 +164,7 @@ function DecisionResult({ output }: { output?: Record<string, unknown> }) {
   const decision = output?.decision as Decision | undefined;
   const message = typeof output?.message === "string" ? output.message : "";
   const approvalUrl = typeof output?.approvalUrl === "string" ? output.approvalUrl : undefined;
+  const checkoutId = typeof output?.checkoutId === "string" ? output.checkoutId : undefined;
   const envelopeHash = typeof output?.envelopeHash === "string" ? output.envelopeHash : "";
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -170,21 +174,17 @@ function DecisionResult({ output }: { output?: Record<string, unknown> }) {
       </div>
       <div className="px-3 py-2.5 text-[13px]">
         <p className="text-ink">{plainText(message)}</p>
-        {approvalUrl &&
-          (approvalUrl.startsWith("https://") ? (
-            <a
-              href={approvalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
-            >
-              Review on Reap
-            </a>
-          ) : (
-            <span className="mt-2 inline-block rounded-lg border border-line bg-paper px-3.5 py-2 text-[12px] text-muted">
-              Demo only. No payment page was created.
-            </span>
-          ))}
+        {approvalUrl?.startsWith("https://") && (
+          <a
+            href={approvalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
+          >
+            Review on Reap
+          </a>
+        )}
+        {checkoutId && <OrderStatus checkoutId={checkoutId} />}
         {envelopeHash && (
           <details className="mt-2">
             <summary className="ac-focus-ring cursor-pointer rounded text-[11px] text-muted">
@@ -193,9 +193,113 @@ function DecisionResult({ output }: { output?: Record<string, unknown> }) {
             <p className="mt-1 break-all font-mono text-[10px] text-muted">
               Record ID {shortHash(envelopeHash)}
             </p>
+            {checkoutId && (
+              <p className="mt-0.5 break-all font-mono text-[10px] text-muted">
+                Reap checkout {checkoutId}
+              </p>
+            )}
           </details>
         )}
       </div>
     </div>
+  );
+}
+
+// ---- Order status: the only place the UI says an order is confirmed, and only on COMPLETED ----
+
+type CheckoutStatusResponse = {
+  checkoutId: string;
+  status: CheckoutStatus;
+  orderId?: string;
+  finalAmount?: Money;
+};
+
+type OrderView =
+  | { phase: "waiting" }
+  | { phase: "final"; status: "COMPLETED" | "FAILED" | "EXPIRED"; orderId?: string; finalAmount?: Money }
+  | { phase: "unknown" };
+
+const FINAL_STATUSES = new Set<CheckoutStatus>(["COMPLETED", "FAILED", "EXPIRED"]);
+const POLL_MS = 2000;
+const MAX_POLLS = 150; // about 5 minutes, long enough to confirm on Reap's page
+
+export function OrderStatus({ checkoutId }: { checkoutId: string }) {
+  const [view, setView] = useState<OrderView>({ phase: "waiting" });
+
+  useEffect(() => {
+    let cancelled = false;
+    let polls = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function poll() {
+      polls += 1;
+      try {
+        const response = await fetch(`/api/checkout?checkoutId=${encodeURIComponent(checkoutId)}`, {
+          cache: "no-store",
+        });
+        if (response.ok) {
+          const data = (await response.json()) as CheckoutStatusResponse;
+          if (cancelled) return;
+          if (FINAL_STATUSES.has(data.status)) {
+            setView({
+              phase: "final",
+              status: data.status as "COMPLETED" | "FAILED" | "EXPIRED",
+              orderId: data.orderId,
+              finalAmount: data.finalAmount,
+            });
+            return;
+          }
+        }
+      } catch {
+        // Network hiccup: keep waiting until the poll budget runs out.
+      }
+      if (cancelled) return;
+      if (polls >= MAX_POLLS) {
+        setView({ phase: "unknown" });
+        return;
+      }
+      timer = setTimeout(() => void poll(), POLL_MS);
+    }
+
+    timer = setTimeout(() => void poll(), 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [checkoutId]);
+
+  if (view.phase === "waiting") {
+    return (
+      <p
+        role="status"
+        aria-live="polite"
+        className="mt-2 flex items-center gap-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[12px] text-blue"
+      >
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue" aria-hidden="true" />
+        Waiting for Reap...
+      </p>
+    );
+  }
+  if (view.phase === "unknown") {
+    return (
+      <p role="status" className="mt-2 rounded-lg border border-orange/40 bg-peach px-3 py-2 text-[12px] text-orange">
+        Reap has not confirmed this order yet, so we stopped checking. Do not treat it as placed.
+      </p>
+    );
+  }
+  if (view.status === "COMPLETED") {
+    const parts = [view.orderId, view.finalAmount ? formatMoney(view.finalAmount) : undefined].filter(Boolean);
+    return (
+      <p role="status" className="mt-2 rounded-lg border border-teal/40 bg-mint px-3 py-2 text-[13px] font-medium text-teal">
+        {parts.length > 0 ? `Order confirmed: ${parts.join(" · ")}` : "Order confirmed by Reap"}
+      </p>
+    );
+  }
+  return (
+    <p role="status" className="mt-2 rounded-lg border border-red/40 bg-rose px-3 py-2 text-[12px] text-red">
+      {view.status === "EXPIRED"
+        ? "This order expired on Reap before it was confirmed, so it was not placed."
+        : "Reap could not complete this order, so it was not placed."}
+    </p>
   );
 }

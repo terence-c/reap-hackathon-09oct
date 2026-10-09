@@ -12,6 +12,7 @@
     "enroll": "tsx scripts/enroll.ts",
     "e2e": "tsx scripts/e2e.ts",
     "smoke": "tsx scripts/smoke-demo.ts",
+    "reset-demo": "tsx scripts/reset-demo.ts",
     "keygen": "tsx scripts/keygen.ts"
   },
   "dependencies": {

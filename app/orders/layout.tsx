@@ -13,8 +13,7 @@ export default function OrdersLayout({ children }: { children: ReactNode }) {
             <span className="text-[17px] font-medium tracking-tight">AgentCart</span>
           </Link>
           <span className="ac-label ml-auto rounded-full border border-line bg-white px-2.5 py-1 text-muted">
-            Demo only
-          </span>
+            Reap sandbox. No real money moves.</span>
         </header>
         <div className="ac-reveal ac-reveal-1 py-10">{children}</div>
       </div>
