@@ -22,3 +22,5 @@ Then add the payment card from the app: click "Add card" in the panel and enter 
 If `better-sqlite3` fails to load, your npm may skip install scripts (`npm config get ignore-scripts` prints `true`); fix it with `cd node_modules/better-sqlite3 && npx prebuild-install`.
 
 Full team setup, the keys to fill in and the step by step checkout run: [SETUP.md](SETUP.md).
+
+Runs offline by default (`REAP_MODE=mock`: Reap simulated from recorded sandbox prices), since Reap invalidated the hackathon keys. See SETUP.md for live mode.

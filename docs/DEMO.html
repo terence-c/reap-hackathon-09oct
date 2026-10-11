@@ -3,140 +3,223 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentCart demo runbook</title>
+<title>AgentCart | Demo field guide</title>
 <link rel="icon" href="data:,">
 <meta name="description" content="AgentCart: the problem, the SAFR mapping, setup, and the on-camera demo script.">
 <style>
+
 :root {
   color-scheme: light;
-  --paper: #fbfaf7;
-  --card: #ffffff;
-  --ink: #1d2130;
-  --muted: #5d6273;
-  --line: #e4e0d6;
-  --head: #f3f1ec;
-  --code-bg: #f6f4ef;
+  --paper: #fbfaf7; --card: #ffffff; --ink: #1d2130; --muted: #5d6273;
+  --line: #e4e0d6; --head: #f3f1ec; --code-bg: #f6f4ef;
   --violet: #5b45c9; --lavender: #eeeaff; --lavender-line: #d2c9fb;
-  --teal: #17795c;   --mint: #e2f5ec;     --mint-line: #a9dcc4;
-  --orange: #a3560b; --peach: #fff0e2;    --peach-line: #f3c99d;
-  --red: #b42c3d;    --rose: #fde8ea;     --rose-line: #f2b8c0;
-  --blue: #22599a;   --sky: #e5f0fc;      --sky-line: #b9d3f3;
+  --teal: #17795c; --mint: #e2f5ec; --mint-line: #a9dcc4;
+  --orange: #a3560b; --peach: #fff0e2; --peach-line: #f3c99d;
+  --red: #b42c3d; --rose: #fde8ea; --rose-line: #f2b8c0;
+  --blue: #22599a; --sky: #e5f0fc; --sky-line: #b9d3f3;
   --butter-ink: #735800; --butter: #fff6d3; --butter-line: #ead27f;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sidebar-width: 248px;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 20px; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-text-size-adjust: 100%; }
-.layout { display: grid; grid-template-columns: 220px minmax(0, 900px); gap: 48px; justify-content: center; padding: 36px 24px 72px; }
-main { min-width: 0; }
+html { scroll-behavior: auto; scroll-padding-top: 104px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.75 var(--sans); -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
+button, input, select { font: inherit; }
+button, summary, select { -webkit-tap-highlight-color: transparent; }
+button, summary { cursor: pointer; }
+button { color: inherit; }
+a { color: var(--violet); text-underline-offset: 4px; }
+button, a, input, select, summary { touch-action: manipulation; }
+:focus-visible { outline: 3px solid var(--violet); outline-offset: 4px; }
+::selection { background: var(--lavender-line); color: var(--ink); }
+[hidden] { display: none !important; }
+svg.icon { width: 19px; height: 19px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; top: 8px; left: 16px; padding: 10px 18px; z-index: 100; background: var(--card); border-radius: 8px; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
 
-/* Table of contents */
-nav.toc { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 14px; }
-.toc-title { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
-nav.toc li { counter-increment: toc; }
-nav.toc a { display: block; padding: 5px 10px; border-radius: 8px; color: var(--ink); text-decoration: none; border-left: 2px solid transparent; }
-nav.toc a::before { content: counter(toc) "  "; color: var(--muted); font-variant-numeric: tabular-nums; white-space: pre; }
-nav.toc a:hover { background: var(--lavender); color: var(--violet); }
-nav.toc a:focus-visible, a:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+/* Navigation */
+.sidebar { width: var(--sidebar-width); position: fixed; inset: 0 auto 0 0; display: flex; flex-direction: column; z-index: 30; background: var(--card); border-right: 1px solid var(--line); padding: 29px 20px 20px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); padding: 0 10px; font-size: 22px; font-weight: 730; letter-spacing: -.8px; }
+.brand-mark { display: grid; place-items: center; width: 34px; height: 38px; background: var(--violet); color: white; border-radius: 10px 10px 12px 12px; }
+.brand-mark .icon { width: 23px; height: 23px; }
+.brand-sub { margin: 5px 0 29px 54px; color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+.search-trigger { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; margin-bottom: 22px; background: var(--paper); color: var(--muted); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; text-align: left; }
+.search-trigger:hover { border-color: var(--lavender-line); }
+.search-trigger kbd { margin-left: auto; font-size: 10px; background: var(--card); }
+.toc { overflow-y: auto; scrollbar-width: thin; flex: 1; }
+.toc-group + .toc-group { margin-top: 22px; }
+.toc-title { padding-left: 12px; margin: 0 0 7px; color: var(--muted); font-size: 9px; letter-spacing: .13em; font-weight: 700; text-transform: uppercase; }
+.toc ol { list-style: none; margin: 0; padding: 0; }
+.toc li { margin: 2px 0; }
+.toc a { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 7px 12px; border-radius: 7px; color: var(--muted); text-decoration: none; font-size: 12px; line-height: 1.45; transition: color .15s, background .15s; }
+.toc a:hover { background: var(--paper); color: var(--ink); }
+.toc a[aria-current="location"] { background: var(--lavender); color: var(--violet); font-weight: 650; }
+.nav-num { width: 17px; flex-shrink: 0; opacity: .65; font: 10px var(--mono); }
+.sidebar-foot { flex-shrink: 0; padding: 15px 12px 0; margin-top: 20px; border-top: 1px solid var(--line); }
+.sandbox-label { display: flex; gap: 7px; align-items: center; color: var(--teal); font-size: 11px; font-weight: 650; }
+.status-dot { width: 6px; height: 6px; border-radius: 100%; background: currentColor; flex-shrink: 0; }
+.sidebar-foot p { margin: 4px 0 0; font-size: 10px; color: var(--muted); }
+.workspace { margin-left: var(--sidebar-width); min-width: 0; }
+.topbar { position: sticky; top: 0; z-index: 20; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 48px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.breadcrumb { display: flex; align-items: center; gap: 13px; font-size: 11px; color: var(--muted); min-width: 0; }
+.breadcrumb span:last-child { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breadcrumb .slash { color: var(--line); }
+.topbar-actions { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.edition { font-size: 10px; color: var(--muted); letter-spacing: .02em; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 11px 17px; border: 1px solid var(--line); background: var(--card); border-radius: 8px; font-size: 12px; line-height: 1.5; font-weight: 600; text-decoration: none; color: var(--ink); transition: background .15s, border-color .15s, transform .15s; }
+.button:hover { border-color: var(--lavender-line); background: var(--lavender); }
+.button.primary { background: var(--violet); border-color: var(--violet); color: white; box-shadow: 0 3px 6px #5b45c918; }
+.button.primary:hover { background: #4e3ab6; }
+.button.quiet { background: transparent; border-color: transparent; padding: 6px 0; color: var(--muted); font-size: 11px; }
+.button.quiet:hover { color: var(--violet); }
+.button:disabled { opacity: .4; cursor: default; }
+.icon-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.mobile-menu, .mobile-search { display: none; }
+.reading-track { position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; pointer-events: none; }
+.reading-track span { display: block; height: 100%; width: 0; background: var(--violet); }
+main { max-width: 1104px; margin: 0 auto; padding: 56px 56px 36px; min-width: 0; }
 
-/* Type */
-h1 { font-size: 46px; line-height: 1.05; letter-spacing: -.02em; margin: 6px 0 18px; }
-h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.01em; margin: 72px 0 14px; padding-top: 18px; border-top: 1px solid var(--line); }
-h2 .num { display: inline-block; min-width: 1.6em; color: var(--violet); font-variant-numeric: tabular-nums; }
-h3 { font-size: 19px; line-height: 1.3; margin: 34px 0 8px; }
-h4 { font-size: 16px; margin: 20px 0 6px; }
-p { margin: 0 0 14px; }
-ul, ol { margin: 0 0 14px; padding-left: 22px; }
-li { margin: 4px 0; }
-a { color: var(--violet); }
+/* Overview */
+.eyebrow { display: flex; align-items: center; gap: 8px; color: var(--violet); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; margin: 0 0 21px; }
+.eyebrow .eyebrow-line { width: 24px; height: 1px; background: var(--violet); }
+.hero-title { font-size: clamp(38px, 4.5vw, 64px); line-height: 1.07; letter-spacing: -.065em; font-weight: 650; margin: 0 0 23px; max-width: 780px; text-wrap: balance; }
+.hero-title span { display: block; color: var(--violet); }
+.lede { font-size: 17px; line-height: 1.75; color: var(--muted); max-width: 610px; margin: 0 0 25px; }
+.hero-actions { display: flex; gap: 11px; flex-wrap: wrap; margin-bottom: 34px; }
+.event-line { color: var(--muted); font-size: 10px; display: flex; gap: 8px; align-items: center; margin-bottom: 32px; }
+.event-line .icon { width: 13px; height: 13px; }
+.metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 23px 8px; margin: 0 0 33px; }
+.metric { display: flex; flex-direction: column; padding: 0 24px; border-right: 1px solid var(--line); }
+.metric:last-child { border: 0; }
+.metric dt { order: 2; color: var(--muted); font-size: 10px; margin-top: 3px; }
+.metric dd { font-size: 25px; letter-spacing: -1px; font-weight: 600; line-height: 1.3; margin: 0; }
+.metric dd small { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.metric:nth-child(2) dd { color: var(--violet); }
+.metric:nth-child(3) dd { color: var(--orange); }
+.metric:nth-child(4) dd { color: var(--teal); }
+.overview-note { font-size: 13px; color: var(--muted); }
+.overview-note summary { font-weight: 600; color: var(--ink); }
+.overview-note p { max-width: 78ch; margin-top: 14px; }
+.section-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 35px 0 13px; }
+.section-label h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.section-label p { font-size: 10px; margin: 0; color: var(--muted); }
+.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.status { border: 1px solid var(--line); border-radius: 10px; background: var(--card); overflow: hidden; font-size: 12px; }
+.status summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 15px 16px; }
+.status summary::-webkit-details-marker { display: none; }
+.status summary::after { content: "+"; margin-left: auto; font-size: 17px; color: var(--muted); }
+.status[open] summary::after { content: "−"; }
+.status-icon { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; background: var(--mint); color: var(--teal); }
+.status.todo .status-icon { background: var(--butter); color: var(--butter-ink); }
+.status.verify .status-icon { background: var(--sky); color: var(--blue); }
+.status.reap .status-icon { background: var(--peach); color: var(--orange); }
+.status strong { display: block; font-size: 12px; line-height: 1.45; font-weight: 600; }
+.status summary small { display: block; font-size: 10px; color: var(--muted); line-height: 1.6; }
+.status ul { border-top: 1px solid var(--line); padding: 13px 22px 15px 32px; margin: 0; }
+.status li { margin: 6px 0; }
+
+/* Reading hierarchy */
+main > section { margin-top: 76px; padding-top: 32px; border-top: 1px solid var(--line); }
+.section-kicker { display: flex; align-items: center; gap: 10px; color: var(--muted); font: 600 9px/1.5 var(--sans); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px; }
+.section-kicker .num { color: var(--violet); font-family: var(--mono); }
+h2 { font-size: 32px; line-height: 1.2; letter-spacing: -.045em; font-weight: 650; margin: 0 0 23px; text-wrap: balance; }
+h3 { font-size: 19px; line-height: 1.4; letter-spacing: -.025em; font-weight: 630; margin: 32px 0 13px; }
+h4 { font-size: 15px; line-height: 1.45; margin: 20px 0 8px; }
+p { margin: 0 0 17px; }
+p, li, td, th, .detail-body { overflow-wrap: anywhere; }
+ul, ol { padding-left: 21px; margin: 0 0 20px; }
+li { margin: 8px 0; }
 strong { font-weight: 650; }
-.eyebrow { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
-.lede { font-size: 19px; line-height: 1.55; }
 .muted { color: var(--muted); }
-.small { font-size: 14px; }
-.runbook { font-size: 15px; }
+.small { font-size: 12px; line-height: 1.7; }
+.runbook { font-size: 14px; }
+.section-intro { color: var(--muted); font-size: 15px; margin-top: -10px; margin-bottom: 27px; }
+.closing { padding: 22px 25px; border-left: 3px solid var(--violet); background: var(--lavender); margin: 24px 0; border-radius: 0 10px 10px 0; font-size: 18px; font-weight: 550; line-height: 1.6; letter-spacing: -.02em; }
+.note { background: var(--sky); border: 1px solid var(--sky-line); border-radius: 10px; padding: 18px 20px; margin: 22px 0; font-size: 12px; line-height: 1.8; }
+.note.warn { background: var(--peach); border-color: var(--peach-line); }
+.note.todo { background: var(--butter); border-color: var(--butter-line); }
+.note > :last-child { margin-bottom: 0; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 17px 0 26px; }
+.card { padding: 23px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.card h4 { margin: 0 0 12px; font-size: 16px; letter-spacing: -.025em; }
+.card p { font-size: 13px; line-height: 1.8; color: var(--muted); }
+.card .risk { margin: 18px 0 0; padding: 13px 0 0; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.8; }
+.card .risk strong { color: var(--ink); display: block; margin-bottom: 4px; }
+.card.c1 h4 { color: var(--violet); }
+.card.c2 h4 { color: var(--blue); }
+.card.c3 h4 { color: var(--teal); }
+.card.c4 h4 { color: var(--orange); }
+.three { padding: 0; list-style: none; counter-reset: three; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 28px 0 36px; }
+.three li { margin: 0; padding: 22px; counter-increment: three; background: var(--card); border: 1px solid var(--line); border-radius: 12px; font-size: 12px; line-height: 1.8; color: var(--muted); }
+.three li::before { content: "0" counter(three); display: block; font: 11px var(--mono); color: var(--violet); margin-bottom: 22px; }
+.three li strong { display: block; color: var(--ink); font-size: 14px; line-height: 1.5; margin-bottom: 10px; }
+.benefit-list { margin: 20px 0 28px; }
+.benefit-row { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; padding: 23px 0; border-bottom: 1px solid var(--line); }
+.benefit-row:first-child { padding-top: 0; }
+.benefit-row h3 { margin: 0; font-size: 14px; line-height: 1.6; }
+.benefit-row p { margin: 0; font-size: 13px; color: var(--muted); }
+.steps { list-style: none; counter-reset: step; padding: 0; }
+.steps > li { position: relative; counter-increment: step; padding: 0 0 20px 43px; margin: 0; border-left: 1px solid var(--line); margin-left: 14px; }
+.steps > li:last-child { border-color: transparent; padding-bottom: 0; }
+.steps > li::before { content: counter(step); position: absolute; left: -14px; top: 0; width: 27px; height: 27px; display: grid; place-items: center; background: var(--mint); border: 3px solid var(--paper); border-radius: 9px; color: var(--teal); font: 600 10px var(--mono); }
 
-/* Code */
-code, kbd { font-family: var(--mono); font-size: .86em; background: var(--code-bg); border: 1px solid #ebe7dd; border-radius: 4px; padding: .08em .35em; overflow-wrap: anywhere; }
-pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 13px/1.55 var(--mono); margin: 0 0 16px; }
+/* Technical detail, progressively disclosed */
+.disclosure { border: 1px solid var(--line); background: var(--card); border-radius: 10px; margin: 10px 0; }
+.disclosure > summary { display: flex; align-items: center; gap: 12px; list-style: none; padding: 19px 21px; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: "+"; margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1; flex-shrink: 0; font-weight: 400; }
+.disclosure[open] > summary::after { content: "−"; }
+.disclosure > summary:hover { color: var(--violet); }
+.disclosure > summary h3 { margin: 0; font-size: 14px; letter-spacing: -.015em; line-height: 1.6; font-weight: 600; }
+.detail-body { padding: 4px 23px 24px; min-width: 0; }
+.detail-body > :first-child { margin-top: 0; }
+.detail-body > :last-child { margin-bottom: 0; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px; }
+.detail-grid h4, .detail-label { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; margin: 0 0 9px; }
+.detail-grid p { font-size: 12px; }
+.concept-body { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px 30px; font-size: 12px; }
+.concept-body .demo-evidence { grid-column: 1 / -1; background: var(--paper); border-radius: 8px; padding: 16px; }
+.concept-body p { margin: 0; }
+.setup-step summary .setup-number { display: grid; place-items: center; width: 27px; height: 27px; background: var(--lavender); color: var(--violet); border-radius: 7px; flex-shrink: 0; font: 11px var(--mono); }
+
+/* Code and reference tables */
+code, kbd { font-family: var(--mono); font-size: .84em; background: var(--code-bg); border: 1px solid #ebe7dd; border-radius: 4px; padding: .1em .35em; overflow-wrap: anywhere; }
+pre { margin: 0 0 20px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 9px; padding: 19px 21px; overflow: auto; font: 12px/1.85 var(--mono); tab-size: 2; }
 pre code { background: none; border: 0; padding: 0; font-size: inherit; overflow-wrap: normal; }
 pre .c { color: #6f7486; }
-
-/* Tables */
-.table-wrap { overflow-x: auto; margin: 14px 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-table { border-collapse: collapse; border-style: hidden; width: 100%; font-size: 14px; line-height: 1.5; }
-th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
-thead th { background: var(--head); font-weight: 600; font-size: 13px; }
-tbody th { background: #faf9f6; font-weight: 600; }
-td ul { margin: 0; padding-left: 18px; }
-table.compact { font-size: 13px; }
-table.flow { font-size: 12.5px; min-width: 980px; }
-table.flow td:first-child { font-weight: 700; text-align: center; white-space: nowrap; }
+.code-block { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; margin: 18px 0; overflow: hidden; }
+.code-block pre { border: 0; border-radius: 0; margin: 0; }
+.code-toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding: 8px 13px 8px 19px; color: var(--muted); font-size: 10px; }
+.copy-button { display: inline-flex; gap: 6px; align-items: center; border: 0; background: transparent; color: var(--muted); font-size: 10px; padding: 4px 7px; border-radius: 5px; }
+.copy-button:hover { background: var(--card); color: var(--violet); }
+.copy-button .icon { width: 13px; height: 13px; }
+.table-wrap { overflow-x: auto; scrollbar-width: thin; margin: 20px 0 26px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.8; }
+th, td { padding: 15px 17px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+thead th { background: var(--head); font-size: 10px; font-weight: 650; color: var(--muted); white-space: nowrap; }
+tbody th { font-weight: 600; }
+tbody tr:last-child > * { border-bottom: 0; }
+tbody tr:hover { background: var(--paper); }
+td ul { margin: 0; padding-left: 16px; }
+table.compact { font-size: 12px; }
+table.flow { min-width: 1140px; font-size: 12px; }
+table.flow td:first-child { color: var(--violet); font: 600 13px var(--mono); }
 .nowrap { white-space: nowrap; }
 
-/* Badges and tags */
-.badge { display: inline-block; font: 600 11.5px/1.5 var(--mono); padding: 0 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; vertical-align: 1px; }
-.b-deny { background: var(--rose); color: var(--red); border-color: var(--rose-line); }
-.b-esc { background: var(--peach); color: var(--orange); border-color: var(--peach-line); }
-.b-auto { background: var(--mint); color: var(--teal); border-color: var(--mint-line); }
-.b-obs { background: var(--sky); color: var(--blue); border-color: var(--sky-line); }
-.tag { display: inline-block; font: 600 11px/1.5 var(--sans); letter-spacing: .03em; text-transform: uppercase; padding: 1px 8px; border-radius: 6px; border: 1px solid; white-space: nowrap; vertical-align: 1px; }
-.tag-todo { background: var(--butter); color: var(--butter-ink); border-color: var(--butter-line); }
-.tag-verify { background: var(--sky); color: var(--blue); border-color: var(--sky-line); }
-.tag-reap { background: var(--peach); color: var(--orange); border-color: var(--peach-line); }
-.tag-secret { background: var(--rose); color: var(--red); border-color: var(--rose-line); }
-.tag-ok { background: var(--mint); color: var(--teal); border-color: var(--mint-line); }
-
-/* Blocks */
-.closing { margin: 22px 0; padding: 16px 20px; border-left: 4px solid var(--violet); background: var(--lavender); border-radius: 0 12px 12px 0; font-size: 19px; font-weight: 600; line-height: 1.45; }
-.note { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--blue); background: var(--sky); border-radius: 0 10px 10px 0; font-size: 15px; }
-.note.warn { border-left-color: var(--orange); background: var(--peach); }
-.note.todo { border-left-color: var(--butter-ink); background: var(--butter); }
-.note > :last-child { margin-bottom: 0; }
-.status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 22px 0 6px; }
-.status { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); font-size: 14px; }
-.status h4 { margin: 0 0 6px; font-size: 14px; }
-.status ul { margin: 0; padding-left: 18px; }
-.status.ok { background: var(--mint); border-color: var(--mint-line); }
-.status.todo { background: var(--butter); border-color: var(--butter-line); }
-.status.verify { background: var(--sky); border-color: var(--sky-line); }
-.status.reap { background: var(--peach); border-color: var(--peach-line); }
-.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0 18px; }
-.card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); }
-.card h4 { margin: 0 0 6px; }
-.card p { margin: 0 0 8px; font-size: 15px; }
-.card .risk { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--rose); font-size: 14px; }
-.card.c1 { border-top: 4px solid var(--violet); }
-.card.c2 { border-top: 4px solid var(--blue); }
-.card.c3 { border-top: 4px solid var(--teal); }
-.card.c4 { border-top: 4px solid var(--orange); }
-.three { padding-left: 0; list-style: none; counter-reset: three; }
-.three li { counter-increment: three; position: relative; padding: 10px 12px 10px 46px; margin: 8px 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
-.three li::before { content: counter(three); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: var(--lavender); color: var(--violet); font-weight: 700; font-size: 13px; text-align: center; line-height: 24px; }
-ul.check { list-style: none; padding-left: 0; }
-ul.check li { position: relative; padding-left: 28px; }
-ul.check li::before { content: ""; position: absolute; left: 2px; top: .3em; width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 3px; background: var(--card); }
-.steps { counter-reset: step; list-style: none; padding-left: 0; }
-.steps > li { counter-increment: step; position: relative; padding-left: 40px; margin: 12px 0; }
-.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 8px; background: var(--mint); color: var(--teal); font-weight: 700; font-size: 13px; text-align: center; line-height: 26px; }
-
-/* Stack diagram (HTML) */
-.stack { display: grid; gap: 0; margin: 16px 0 20px; }
-.layer { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 15px; }
-.layer h4 { margin: 0 0 4px; }
+/* Keep the architecture and its original colours */
+.stack { display: grid; margin: 22px 0; }
+.layer { padding: 22px 25px; border: 1px solid var(--line); border-radius: 11px; font-size: 13px; }
+.layer h4 { margin: 0 0 8px; font-size: 14px; }
 .layer p { margin: 0; }
 .layer.l1 { background: var(--lavender); border-color: var(--lavender-line); }
 .layer.l2 { background: var(--mint); border-color: var(--mint-line); }
 .layer.l3 { background: var(--sky); border-color: var(--sky-line); }
-.joint { text-align: center; font: 12px/1.4 var(--mono); color: var(--muted); padding: 6px 0; }
-.joint::before { content: "\2193  "; white-space: pre; }
-
-/* SVG diagram */
-figure { margin: 18px 0 22px; }
-figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
-.diagram-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 10px; }
+.joint { text-align: center; font: 10px/1.7 var(--mono); color: var(--muted); padding: 14px 10px; overflow-wrap: anywhere; }
+.joint::before { content: "↓"; display: block; font: 18px var(--sans); margin-bottom: 5px; }
+figure { margin: 24px 0 35px; }
+.diagram-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 20px; scrollbar-width: thin; }
 svg.diagram { display: block; width: 100%; min-width: 720px; height: auto; }
 svg.diagram .dg-t { font: 600 13px var(--sans); fill: #1d2130; }
 svg.diagram .dg-s { font: 11.5px var(--sans); fill: #444a5a; }
@@ -144,117 +227,278 @@ svg.diagram .dg-m { font: 11px var(--mono); fill: #444a5a; }
 svg.diagram .dg-l { font: 11px var(--sans); fill: #5d6273; }
 svg.diagram .edge { stroke: #5d6273; stroke-width: 1.5; fill: none; }
 svg.diagram .edge.dash { stroke-dasharray: 5 4; }
+figcaption { margin: 13px 4px 0; color: var(--muted); font-size: 11px; line-height: 1.8; }
+.diagram-topline { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+.diagram-topline h3 { margin: 0; font-size: 15px; }
+.diagram-topline span { color: var(--muted); font-size: 10px; }
 
-footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+/* Outcomes */
+.badge, .tag { display: inline-flex; align-items: center; padding: 2px 7px; font: 600 10px/1.5 var(--sans); border: 1px solid; border-radius: 5px; vertical-align: 1px; max-width: 100%; overflow-wrap: anywhere; }
+.b-deny, .tag-secret { background: var(--rose); color: var(--red); border-color: var(--rose-line); }
+.b-esc, .tag-reap { background: var(--peach); color: var(--orange); border-color: var(--peach-line); }
+.b-auto, .tag-ok { background: var(--mint); color: var(--teal); border-color: var(--mint-line); }
+.b-obs, .tag-verify { background: var(--sky); color: var(--blue); border-color: var(--sky-line); }
+.tag-todo { background: var(--butter); color: var(--butter-ink); border-color: var(--butter-line); }
 
-@media screen and (max-width: 1100px) {
-  html { scroll-padding-top: 64px; }
-  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px 56px; }
-  nav.toc { position: sticky; top: 0; z-index: 10; max-height: none; overflow-x: auto; overflow-y: hidden; margin: 0 -16px 18px; padding: 8px 16px; background: var(--paper); border-bottom: 1px solid var(--line); }
-  .toc-title { display: none; }
-  nav.toc ol { display: flex; gap: 4px; white-space: nowrap; }
-  nav.toc a { padding: 6px 10px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
-  h1 { font-size: 38px; margin-top: 18px; }
+/* Rehearsal */
+.demo-player { border: 1px solid var(--line); border-radius: 13px; background: var(--card); margin: 26px 0; overflow: hidden; }
+.player-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 15px 18px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.player-toolbar label { color: var(--muted); font-size: 11px; display: flex; align-items: center; gap: 9px; }
+.player-toolbar select { border: 1px solid var(--line); background: var(--card); border-radius: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); }
+.view-toggle { display: flex; padding: 3px; background: var(--head); border: 1px solid var(--line); border-radius: 7px; }
+.view-toggle button { border: 0; border-radius: 4px; background: none; font-size: 10px; color: var(--muted); padding: 5px 9px; }
+.view-toggle button[aria-pressed="true"] { color: var(--ink); background: var(--card); box-shadow: 0 1px 3px #1d213010; }
+.player-body { display: grid; grid-template-columns: 190px minmax(0, 1fr); }
+.step-nav { padding: 15px 10px; border-right: 1px solid var(--line); background: var(--paper); }
+.step-nav button { width: 100%; display: flex; align-items: center; gap: 9px; border: 0; background: none; border-radius: 7px; text-align: left; padding: 10px; color: var(--muted); font-size: 10px; line-height: 1.5; margin: 2px 0; }
+.step-nav button span:first-child { font: 10px var(--mono); opacity: .7; }
+.step-nav button:hover { color: var(--violet); }
+.step-nav button[aria-current="step"] { color: var(--violet); background: var(--lavender); font-weight: 650; }
+.stage { padding: 29px; min-width: 0; }
+.stage-kicker { display: flex; align-items: center; gap: 9px; justify-content: space-between; color: var(--muted); font: 10px var(--mono); margin-bottom: 13px; }
+.stage h3 { font-size: 24px; letter-spacing: -.04em; margin: 0 0 22px; }
+.stage-instruction { font-size: 13px; line-height: 1.85; }
+.stage-instruction p { margin-bottom: 18px; }
+.stage blockquote { margin: 20px 0; padding: 18px 20px; background: var(--lavender); color: var(--ink); border-radius: 9px; font-size: 14px; line-height: 1.8; }
+.stage blockquote .detail-label { color: var(--violet); }
+.stage blockquote p { margin: 0; }
+.stage .disclosure { margin-top: 18px; background: var(--paper); }
+.stage .disclosure summary { padding: 12px 15px; font-size: 11px; }
+.stage .detail-body { font-size: 12px; padding: 0 15px 16px; }
+.stage .detail-body h4 { margin: 14px 0 6px; font-size: 11px; }
+.player-footer { padding: 15px 20px; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); }
+.player-footer .step-progress { color: var(--muted); font-size: 10px; margin-right: auto; }
+.player-footer .button { font-size: 10px; padding: 8px 12px; }
+.player-full-note { padding: 18px; font-size: 12px; color: var(--muted); margin: 0; }
+.has-player .flow-source { display: none; }
+.has-player.show-full .flow-source { display: block; }
+.prompt-copy { margin-top: 7px; }
+
+/* Checklists */
+ul.check { list-style: none; padding: 0; border: 1px solid var(--line); background: var(--card); border-radius: 11px; overflow: hidden; margin-top: 13px; }
+ul.check > li { padding: 14px 18px; margin: 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+ul.check > li:last-child { border: 0; }
+ul.check label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+ul.check input { flex-shrink: 0; width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--violet); cursor: pointer; }
+ul.check li:has(input:checked) { background: var(--paper); }
+ul.check li:has(input:checked) label > span { color: var(--muted); }
+.checklist-bar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 22px; }
+.checklist-bar output { font-size: 11px; color: var(--teal); font-weight: 600; }
+.checklist-bar button { border: 0; background: none; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Search and mobile contents */
+dialog { color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 0; box-shadow: 0 20px 90px #1d213026; }
+dialog::backdrop { background: #1d21303d; backdrop-filter: blur(3px); }
+.search-dialog { width: min(600px, calc(100% - 30px)); margin: 13vh auto auto; max-height: 72vh; }
+.search-field { display: flex; align-items: center; gap: 12px; padding: 18px 21px; border-bottom: 1px solid var(--line); }
+.search-field > .icon { color: var(--violet); }
+.search-field input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 14px; color: var(--ink); }
+.dialog-close { border: 1px solid var(--line); background: var(--paper); color: var(--muted); border-radius: 5px; padding: 3px 7px; font-size: 10px; }
+.search-results { max-height: 47vh; overflow-y: auto; padding: 8px; }
+.search-result { display: block; padding: 13px 15px; text-decoration: none; border-radius: 8px; color: var(--ink); }
+.search-result:hover { background: var(--lavender); }
+.search-result strong { display: block; font-size: 13px; }
+.search-result span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.65; }
+.search-hint { color: var(--muted); font-size: 11px; padding: 14px 20px; margin: 0; border-top: 1px solid var(--line); }
+.search-empty { padding: 20px; color: var(--muted); font-size: 13px; }
+.contents-dialog { width: min(380px, calc(100% - 24px)); max-height: calc(100dvh - 30px); padding: 22px; }
+.dialog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+.dialog-header h2 { font-size: 20px; margin: 0; }
+.contents-dialog .toc a { font-size: 13px; padding: 10px 12px; }
+.contents-dialog .toc-group + .toc-group { margin-top: 18px; }
+.toast { position: fixed; bottom: 24px; left: calc(50% + var(--sidebar-width) / 2); transform: translateX(-50%); background: var(--card); color: var(--violet); border: 1px solid var(--lavender-line); padding: 10px 18px; border-radius: 8px; font-size: 12px; z-index: 80; max-width: calc(100% - 32px); box-shadow: 0 4px 20px #1d213020; }
+.page-foot { display: flex; gap: 35px; align-items: flex-start; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 65px; padding-top: 25px; font-size: 10px; color: var(--muted); }
+.page-foot p { max-width: 580px; }
+.page-foot a { white-space: nowrap; text-decoration: none; }
+
+@media (min-width: 1500px) {
+  :root { --sidebar-width: 266px; }
+  main { padding-top: 70px; }
+  .sidebar { padding-left: 24px; padding-right: 24px; }
 }
-@media screen and (max-width: 680px) {
-  .status-grid, .cards { grid-template-columns: minmax(0, 1fr); }
-  h2 { font-size: 24px; margin-top: 56px; }
-  .lede { font-size: 17px; }
+@media (max-width: 1200px) {
+  :root { --sidebar-width: 224px; }
+  main { padding: 42px 34px 30px; }
+  .topbar { padding: 0 34px; }
+  .sidebar { padding-left: 14px; padding-right: 14px; }
+  .hero-title { font-size: 49px; }
+  .metric { padding: 0 16px; }
+  .metric dd { font-size: 23px; }
+  .three { gap: 10px; }
+  .three li { padding: 18px; }
 }
-
-@page { size: A4; margin: 15mm 14mm; }
+@media (max-width: 1000px) {
+  :root { --sidebar-width: 0px; }
+  .sidebar { display: none; }
+  .workspace { margin-left: 0; }
+  .topbar { padding: 0 30px; height: 64px; }
+  .mobile-menu, .mobile-search { display: grid; }
+  .breadcrumb { flex: 1; }
+  .breadcrumb .guide-label, .breadcrumb .slash { display: none; }
+  .topbar-actions { gap: 10px; }
+  .edition { display: none; }
+  main { max-width: 900px; padding: 46px 35px 30px; }
+  .hero-title { font-size: 58px; }
+  html { scroll-padding-top: 87px; }
+}
+@media (max-width: 680px) {
+  body { font-size: 14px; }
+  main { padding: 32px 20px 25px; }
+  .topbar { padding: 0 17px; gap: 11px; }
+  .topbar .print-label { display: none; }
+  .topbar-actions { gap: 13px; }
+  .hero-title { font-size: clamp(36px, 8.8vw, 53px); letter-spacing: -.055em; }
+  .eyebrow { font-size: 9px; margin-bottom: 18px; }
+  .lede { font-size: 15px; }
+  .hero-actions { gap: 9px; margin-bottom: 24px; }
+  .hero-actions .button { font-size: 11px; padding: 10px 13px; }
+  .event-line { flex-wrap: wrap; line-height: 1.5; font-size: 9px; margin-bottom: 26px; }
+  .metric-strip { grid-template-columns: 1fr 1fr; padding: 0; margin-bottom: 27px; }
+  .metric { padding: 17px 20px; border-bottom: 1px solid var(--line); }
+  .metric:nth-child(2) { border-right: 0; }
+  .metric:nth-child(3) { border-bottom: 0; }
+  .metric dd { font-size: 25px; }
+  .status-grid { grid-template-columns: 1fr; gap: 9px; }
+  .section-label { display: block; margin-top: 27px; }
+  .section-label p { margin-top: 4px; }
+  main > section { margin-top: 50px; padding-top: 25px; }
+  h2 { font-size: 28px; margin-bottom: 20px; }
+  h3 { font-size: 18px; }
+  .three, .cards { grid-template-columns: 1fr; }
+  .three li { padding: 20px; }
+  .three li::before { margin-bottom: 12px; }
+  .card { padding: 21px; }
+  .benefit-row { grid-template-columns: 1fr; gap: 10px; padding: 20px 0; }
+  .table-wrap table { min-width: 650px; }
+  .table-wrap table.flow { min-width: 1140px; }
+  .disclosure > summary { padding: 16px; }
+  .detail-body { padding: 2px 16px 20px; }
+  .detail-grid, .concept-body { grid-template-columns: 1fr; gap: 18px; }
+  .concept-body .demo-evidence { grid-column: auto; }
+  .note { padding: 16px; }
+  .diagram-wrap { padding: 10px; }
+  .diagram-topline { display: block; }
+  .diagram-topline span { display: block; margin-top: 4px; }
+  .player-toolbar { align-items: flex-start; padding: 13px; gap: 12px; flex-wrap: wrap; }
+  .player-body { grid-template-columns: 1fr; }
+  .step-nav { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); gap: 3px; padding: 9px; }
+  .step-nav button { width: auto; min-width: 38px; justify-content: center; padding: 8px 10px; flex-shrink: 0; }
+  .step-nav button .step-name { display: none; }
+  .stage { padding: 23px 18px; }
+  .stage h3 { font-size: 24px; }
+  .player-footer { padding: 14px; gap: 9px; }
+  .player-footer .button { padding: 8px 10px; }
+  .closing { padding: 19px 20px; font-size: 16px; }
+  .page-foot { display: block; margin-top: 45px; }
+  .search-dialog { margin-top: 8vh; }
+  .toast { bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+@page { size: A4; margin: 15mm 13mm; }
 @page wide { size: A4 landscape; margin: 11mm; }
 @media print {
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-shadow: none !important; }
   html { scroll-behavior: auto; }
-  body { background: #fff; font-size: 10.5pt; line-height: 1.5; }
-  .layout { display: block; padding: 0; }
-  nav.toc { position: static; max-height: none; overflow: visible; margin: 0 0 14pt; padding: 10pt 12pt; border: 1px solid var(--line); border-radius: 8px; }
-  .toc-title { display: block; }
-  nav.toc ol { display: block; columns: 2; column-gap: 18pt; }
-  nav.toc a { padding: 1pt 0; border: 0; background: none; color: var(--ink); }
-  h1 { font-size: 30pt; }
-  h2 { font-size: 18pt; margin-top: 26pt; break-after: avoid; page-break-after: avoid; }
-  h3, h4 { break-after: avoid; page-break-after: avoid; }
-  .lede, .closing { font-size: 12.5pt; }
+  body { font-size: 10pt; line-height: 1.6; background: white; }
+  .sidebar, .topbar, .skip-link, .hero-actions, dialog, .toast, .code-toolbar, .demo-player, .checklist-bar, .page-foot > a { display: none !important; }
+  .workspace { margin: 0; }
+  main { max-width: none; padding: 0; }
+  .hero-title { font-size: 34pt; }
+  .lede { font-size: 12pt; }
+  .metric-strip { padding: 15px 0; }
+  .status-grid { grid-template-columns: 1fr 1fr; }
+  .disclosure, .status { break-inside: auto; }
+  details > summary::after { display: none !important; }
+  details::details-content { display: contents; }
+  main > section { margin-top: 24pt; padding-top: 17pt; }
+  h2 { font-size: 22pt; break-after: avoid; }
+  h3, h4, summary, .section-kicker { break-after: avoid; }
+  .runbook { font-size: 10pt; }
   .table-wrap, .diagram-wrap { overflow: visible; }
-  table { font-size: 8.8pt; }
-  table.flow { min-width: 0; font-size: 7.9pt; }
-  tr, pre, figure, .card, .note, .status, .layer, .three li, .steps > li { break-inside: avoid; page-break-inside: avoid; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 8.6pt; }
+  .table-wrap table, .table-wrap table.flow { min-width: 0; }
+  table, table.compact { font-size: 8pt; }
+  table.flow { font-size: 7.5pt; }
+  th, td { padding: 7pt; }
+  thead th { font-size: 8pt; white-space: normal; }
+  tr, figure, .card, .note, .layer, .three li { break-inside: avoid; }
+  .code-block { break-inside: auto; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 8pt; }
   svg.diagram { min-width: 0; }
-  a { color: inherit; text-decoration: none; }
+  .has-player .flow-source { display: block !important; }
   .print-wide { page: wide; }
-  .print-break { break-before: page; page-break-before: always; }
-  footer.page-foot { margin-top: 24pt; }
+  .detail-body { padding: 8pt 12pt 12pt; }
+  .disclosure > summary { padding: 10pt 12pt; }
+  .page-foot { margin-top: 25pt; }
+  a { color: inherit; text-decoration: none; }
+  input[type="checkbox"] { appearance: none; width: 11pt; height: 11pt; border: 1pt solid var(--muted); border-radius: 2pt; }
+  input[type="checkbox"]:checked { background: var(--lavender); }
 }
+
 </style>
+<noscript><style>.sidebar{position:static;display:block;width:auto;padding:20px;border-bottom:1px solid var(--line)}.sidebar .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px}.sidebar .toc-group{margin-top:0}.sidebar-foot,.brand-sub{display:none}.workspace{margin-left:0}.topbar{display:none}</style></noscript>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden"><symbol id="icon-bag" viewBox="0 0 24 24"><path d="M5 7h14l1 14H4L5 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/><path d="m9 14 2 2 4-4"/></symbol><symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol><symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-5-5 5 5-5 5"/></symbol><symbol id="icon-left" viewBox="0 0 24 24"><path d="M20 12H5m5-5-5 5 5 5"/></symbol><symbol id="icon-diagram" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="5" rx="1"/><rect x="2" y="16" width="7" height="5" rx="1"/><rect x="15" y="16" width="7" height="5" rx="1"/><path d="M12 8v4H5.5v4M12 12h6.5v4"/></symbol><symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2"/></symbol><symbol id="icon-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3"/><path d="M7 14h10v7H7zM17 11h1"/></symbol><symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="icon-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v.1"/></symbol><symbol id="icon-tool" viewBox="0 0 24 24"><path d="M14 6a5 5 0 0 0-6 6L3 17a2.8 2.8 0 0 0 4 4l5-5a5 5 0 0 0 6-6l-3 3-4-4 3-3Z"/></symbol><symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4"/></symbol><symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol></svg>
 <div class="layout">
-
-<nav class="toc" aria-label="Contents">
-  <p class="toc-title">Contents</p>
-  <ol>
-    <li><a href="#pitch">AgentCart in brief</a></li>
-    <li><a href="#problem">The problem</a></li>
-    <li><a href="#benefits">Who benefits</a></li>
-    <li><a href="#safr">The SAFR mapping</a></li>
-    <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#setup">Setup</a></li>
-    <li><a href="#identities">Demo identities</a></li>
-    <li><a href="#demo-flow">Demo flow</a></li>
-    <li><a href="#reset">Reset between takes</a></li>
-    <li><a href="#troubleshooting">Troubleshooting</a></li>
-    <li><a href="#recording">Recording checklist</a></li>
-    <li><a href="#references">References</a></li>
-  </ol>
-</nav>
-
-<main>
+<aside class="sidebar">
+  <a class="brand" href="#pitch" aria-label="AgentCart overview"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-bag"></use></svg></span>AgentCart<span style="color:var(--violet)">.</span></a>
+  <p class="brand-sub">The demo field guide</p>
+  <button class="search-trigger" type="button" data-open-search hidden><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>Search this guide <kbd>⌘ K</kbd></button>
+  <nav class="toc" aria-label="Contents"><div class="toc-group"><p class="toc-title">The idea</p><ol><li><a href="#pitch" aria-current="location"><span class="nav-num">01</span>Overview</a></li><li><a href="#problem"><span class="nav-num">02</span>The problem</a></li><li><a href="#benefits"><span class="nav-num">03</span>Who benefits</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">The system</p><ol><li><a href="#safr"><span class="nav-num">04</span>The SAFR framework</a></li><li><a href="#architecture"><span class="nav-num">05</span>Architecture</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">The demo</p><ol><li><a href="#setup"><span class="nav-num">06</span>Setup</a></li><li><a href="#identities"><span class="nav-num">07</span>Accounts &amp; identities</a></li><li><a href="#demo-flow"><span class="nav-num">08</span>Demo walkthrough</a></li><li><a href="#reset"><span class="nav-num">09</span>Reset between takes</a></li><li><a href="#troubleshooting"><span class="nav-num">10</span>Troubleshooting</a></li><li><a href="#recording"><span class="nav-num">11</span>Recording checklist</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">Resources</p><ol><li><a href="#references"><span class="nav-num">12</span>References</a></li></ol></div></nav>
+  <div class="sidebar-foot"><span class="sandbox-label"><span class="status-dot"></span>Reap sandbox</span><p>Test cards. No real money moves.</p></div>
+</aside>
+<div class="workspace">
+<header class="topbar">
+  <button class="icon-button mobile-menu" type="button" aria-label="Open contents" data-open-contents hidden><svg class="icon" aria-hidden="true"><use href="#icon-menu"></use></svg></button>
+  <div class="breadcrumb"><span class="guide-label">Field guide</span><span class="slash">/</span><span id="current-section">Overview</span></div>
+  <div class="topbar-actions"><span class="edition">Reap × 65labs · Buildathon 2026</span><button class="icon-button mobile-search" type="button" data-open-search aria-label="Search this guide" hidden><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></button><button class="button quiet" id="print-guide" type="button" aria-label="Print guide" hidden><svg class="icon" aria-hidden="true"><use href="#icon-print"></use></svg><span class="print-label">Print guide</span></button></div>
+  <div class="reading-track" aria-hidden="true"><span id="reading-progress"></span></div>
+</header>
+<main id="main-content" tabindex="-1">
 
 <!-- ============================== 1. Title and pitch ============================== -->
 <header id="pitch">
-  <p class="eyebrow">Demo runbook and problem statement</p>
-  <h1>AgentCart</h1>
-  <p class="lede">AgentCart is an AI purchasing agent that cannot spend until a SAFR gateway verifies its identity, checks its mandate, and logs the decision. The agent browses a small catalog and gets real merchant quotes through Reap's Agentic Payments sandbox, but none of its tools can pay. Its only route to money is to propose a purchase to the gateway, which rebuilds the request from server data, signs it, checks it against the spending limits the user set, writes the decision to a hash-chained log, and only then asks Reap for a checkout.</p>
-  <p>Built for the Reap × 65labs Agentic Buildathon, 9 Oct 2026, Singapore, in the track "Most Worthwhile Problem".</p>
-  <p class="closing">Every agent can decide; ours can't spend until its authority is verified, its limits checked, and the decision logged.</p>
-
-  <div class="status-grid" aria-label="Build status">
-    <div class="status ok">
-      <h4><span class="tag tag-ok">Built and tested</span></h4>
-      <ul>
+  <p class="eyebrow"><span class="eyebrow-line"></span>AgentCart · Demo field guide</p>
+  <h1 class="hero-title">The agent can choose.<span>You stay in control.</span></h1>
+  <p class="lede">An AI purchasing agent with a checkpoint before every payment. Identity verified, spending limits checked, and every decision recorded.</p>
+  <div class="hero-actions"><a class="button primary" href="#demo-flow">Walk through the demo <svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg></a><a class="button" href="#architecture"><svg class="icon" aria-hidden="true"><use href="#icon-diagram"></use></svg>Explore the architecture</a></div>
+  <p class="event-line"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg>9 October 2026 <span aria-hidden="true">·</span> Singapore <span aria-hidden="true">·</span> Reap × 65labs Buildathon</p>
+  <dl class="metric-strip" aria-label="Demo spending limits">
+    <div class="metric"><dt>Total budget</dt><dd>S$150</dd></div>
+    <div class="metric"><dt>Ask for approval above</dt><dd>S$80</dd></div>
+    <div class="metric"><dt>Approval window</dt><dd>5 <small>min</small></dd></div>
+    <div class="metric"><dt>Possible outcomes</dt><dd>04</dd></div>
+  </dl>
+  <details class="overview-note"><summary>How AgentCart works</summary><p>AgentCart is an AI purchasing agent that cannot spend until a SAFR gateway verifies its identity, checks its mandate, and logs the decision. The agent browses a small catalog and gets real merchant quotes through Reap's Agentic Payments sandbox, but none of its tools can pay. Its only route to money is to propose a purchase to the gateway, which rebuilds the request from server data, signs it, checks it against the spending limits the user set, writes the decision to a hash-chained log, and only then asks Reap for a checkout.</p><p>Built for the “Most Worthwhile Problem” track at the Reap × 65labs Agentic Buildathon.</p><p class="closing">Every agent can decide; ours can't spend until its authority is verified, its limits checked, and the decision logged.</p></details>
+  <div class="section-label"><h3>Before you present</h3><p>Build snapshot · 9 Oct 2026</p></div>
+  <div class="status-grid" aria-label="Build status"><details class="status ok"><summary><span class="status-icon"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg></span><span><small>Built and tested</small><strong>Core flow in place</strong></span></summary><ul>
         <li>SAFR gate: identity, controls, disposition, audit log.</li>
         <li>Reap adapter: quotes, checkouts, card enrollment, cents conversion.</li>
         <li>Agent with three tools and the two-pane app with approvals, pause and tamper demo.</li>
         <li><code>npm test</code>: 66 tests in 6 files pass.</li>
-      </ul>
-    </div>
-    <div class="status todo">
-      <h4><span class="tag tag-todo">Not yet built</span></h4>
-      <ul>
+      </ul></details>
+<details class="status todo"><summary><span class="status-icon"><svg class="icon" aria-hidden="true"><use href="#icon-tool"></use></svg></span><span><small>Not yet built</small><strong>Kill switch in the app</strong></span></summary><ul>
         <li>A kill switch control in the app. The gate enforces <code>KILL_SWITCH</code>, but the flag can only be set from the terminal (<code>POST /api/mandate</code>), and the panel does not display it.</li>
-      </ul>
-    </div>
-    <div class="status verify">
-      <h4><span class="tag tag-verify">Not yet verified</span></h4>
-      <ul>
+      </ul></details>
+<details class="status verify"><summary><span class="status-icon"><svg class="icon" aria-hidden="true"><use href="#icon-clock"></use></svg></span><span><small>Needs a rehearsal</small><strong>Hosted Reap approval</strong></span></summary><ul>
         <li>Reap's hosted checkout approval page. The default sandbox setting (<code>REAP_SIMULATE_CHECKOUT=true</code>) skips it. The code path for it exists, but <code>NOTES.md</code> does not record an end-to-end run.</li>
-      </ul>
-    </div>
-    <div class="status reap">
-      <h4><span class="tag tag-reap">Reap side</span></h4>
-      <ul>
+      </ul></details>
+<details class="status reap"><summary><span class="status-icon"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg></span><span><small>Sandbox issue</small><strong>Beer quote unavailable</strong></span></summary><ul>
         <li>Quotes for brewlander.com (the beer) return 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code>, so the category demo step cannot get a live quote today.</li>
-      </ul>
-    </div>
-  </div>
+      </ul></details></div>
 </header>
 
 <!-- ============================== 2. Problem ============================== -->
 <section id="problem">
-  <h2><span class="num">2</span>The problem we are solving</h2>
+  <div class="section-kicker"><span class="num">02</span><span>The idea</span></div>
+<h2>When agents start spending</h2>
 
   <h3>The shift</h3>
   <p>AI assistants have spent the last few years recommending what to buy. They are now starting to buy it. An agent that can search a catalog, compare prices and fill a cart can also be handed a card, and payment providers are opening checkout APIs built for agents, Reap's Agentic Payments among them.</p>
@@ -308,92 +552,35 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
 
 <!-- ============================== 3. Benefits ============================== -->
 <section id="benefits">
-  <h2><span class="num">3</span>Who benefits and how</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th style="width:26%">Stakeholder</th><th>What they get</th></tr></thead>
-      <tbody>
-        <tr><th>Finance and operations teams</th><td>Bounded delegation: a hard cap (S$150 in the demo) and an auto-approve threshold (S$80) that the agent cannot exceed or edit. Every decision comes with one plain sentence, for example "{amount} is above the S$80.00 auto-approve limit, so a human must approve it."</td></tr>
-        <tr><th>Compliance and risk</th><td>A hash-chained audit log that reconstructs any decision from the signed purchase record, the rules that fired and the reason, without trusting the agent's own account. Identity is bound to an Ed25519 signature checked against a registered public key, not to an ID string anyone can type.</td></tr>
-        <tr><th>The person delegating</th><td>One place to set budget, currency, categories and dates ("Edit spending limits") and one switch to stop the agent ("Pause assistant"). Escalations expire after 5 minutes if ignored, and the money held for them is released.</td></tr>
-        <tr><th>Payment providers such as Reap</th><td>A checkout request arrives only after the agent's authority has been verified, carries an idempotency key equal to the signed record's hash, and can be traced back to a structured intent record. That lowers dispute and fraud risk.</td></tr>
-        <tr><th>Developers building agents</th><td>A drop-in gate with a one-function interface, <code>proposeCheckout({ quoteId, reason, sessionId })</code>. The agent never handles amounts, cards or checkouts, so its code stays simple.</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div class="section-kicker"><span class="num">03</span><span>The idea</span></div>
+<h2>Who this is for</h2>
+  <div class="benefit-list"><div class="benefit-row"><h3>Finance and operations teams</h3><p>Bounded delegation: a hard cap (S$150 in the demo) and an auto-approve threshold (S$80) that the agent cannot exceed or edit. Every decision comes with one plain sentence, for example "{amount} is above the S$80.00 auto-approve limit, so a human must approve it."</p></div>
+<div class="benefit-row"><h3>Compliance and risk</h3><p>A hash-chained audit log that reconstructs any decision from the signed purchase record, the rules that fired and the reason, without trusting the agent's own account. Identity is bound to an Ed25519 signature checked against a registered public key, not to an ID string anyone can type.</p></div>
+<div class="benefit-row"><h3>The person delegating</h3><p>One place to set budget, currency, categories and dates ("Edit spending limits") and one switch to stop the agent ("Pause assistant"). Escalations expire after 5 minutes if ignored, and the money held for them is released.</p></div>
+<div class="benefit-row"><h3>Payment providers such as Reap</h3><p>A checkout request arrives only after the agent's authority has been verified, carries an idempotency key equal to the signed record's hash, and can be traced back to a structured intent record. That lowers dispute and fraud risk.</p></div>
+<div class="benefit-row"><h3>Developers building agents</h3><p>A drop-in gate with a one-function interface, <code>proposeCheckout({ quoteId, reason, sessionId })</code>. The agent never handles amounts, cards or checkouts, so its code stays simple.</p></div></div>
   <p><strong>From hackathon demo to institution.</strong> The same four components and the same four outcomes carry over; what changes is configuration, not architecture. Thresholds, categories and merchant lists (<code>allowedMerchants</code> is already supported) differ per use case, reviewers become authenticated roles, and the audit log moves to storage the operator cannot quietly rewrite. New agents integrate natively by calling <code>proposeCheckout</code>, as AgentCart does; existing agents can sit behind the same checkpoint as a gateway that intercepts their payment calls. Either way, the payment rail only ever sees a request after the gate has said yes.</p>
 </section>
 
 <!-- ============================== 4. SAFR ============================== -->
 <section id="safr">
-  <h2><span class="num">4</span>How this implements the SAFR framework</h2>
+  <div class="section-kicker"><span class="num">04</span><span>The system</span></div>
+<h2>The SAFR framework</h2>
   <p>We built against the Monetary Authority of Singapore white paper <strong>"Safeguards for Agentic Finance at Runtime" (SAFR), version 1.0, July 2026</strong>, as our reference approach. It is a white paper, not regulatory guidance, and nothing in this document claims compliance with it. Where we describe what the paper asks for, that is our paraphrase, not a quotation.</p>
 
   <h3>SAFR in one paragraph</h3>
   <p>SAFR places a runtime governance checkpoint between every agent decision and its execution. The checkpoint has four components: <strong>Agent Identity</strong> (who is acting, and whether they may act at all), a <strong>Controls Repository</strong> (the authority the principal has delegated), a <strong>Disposition Engine</strong> (which applies those controls) and an <strong>Audit Log</strong> (which records what was decided and why). The components operate on a <strong>Governance Envelope</strong>, a structured record of the proposed action, its action trace and its context, and produce one of four outcomes: <span class="badge b-deny">Deny</span> <span class="badge b-esc">Escalate</span> <span class="badge b-auto">Auto-Execute</span> <span class="badge b-obs">Observe</span>.</p>
 
   <h3>Concept by concept</h3>
-  <div class="table-wrap">
-    <table class="compact">
-      <thead><tr><th style="width:15%">SAFR concept</th><th style="width:24%">What the paper asks for (our reading)</th><th style="width:34%">Where it lives in our code</th><th>How the demo shows it</th></tr></thead>
-      <tbody>
-        <tr>
-          <th>Governance Envelope</th>
-          <td>A structured record of the proposed action, its action trace and context metadata, filled by the checkpoint rather than the agent, and protected against change.</td>
-          <td><code>lib/safr/envelope.ts</code>: <code>buildEnvelope</code> fills every field from the quote, catalog, mandate and registry; <code>hashEnvelope</code> (SHA-256 of canonical JSON); <code>signEnvelope</code> (Ed25519 over the hash). Type <code>Envelope</code> in <code>lib/types.ts</code>. The agent supplies only <code>quoteId</code> and <code>reason</code>.</td>
-          <td>Panel section "03 · Purchase details": the latest record with a "Signed by the assistant" badge; "Technical details" shows the full JSON including <code>context.toolTrace</code>.</td>
-        </tr>
-        <tr>
-          <th>Agent Identity</th>
-          <td>Verify the agent before any other evaluation: registered, active, authentic, allowed this tool and action type, acting for this principal. An identity failure is rejected before Controls are consulted.</td>
-          <td><code>lib/safr/registry.ts</code> (<code>getAgent</code>, <code>setAgentStatus</code>, <code>registerPublicKey</code>, <code>authorizeToolCall</code> for the tool allowlist); <code>verifyEnvelope</code> in <code>envelope.ts</code>; <code>checkIdentity</code> in <code>disposition.ts</code>. In <code>gate.ts</code>, <code>decide()</code> returns on an identity failure before the budget and velocity queries run or <code>dispose()</code> is called. (The mandate is loaded earlier, only to fill the envelope.)</td>
-          <td>Step 8: "Pause assistant" then any purchase gives <span class="badge b-deny">DENY</span> <code>IDENTITY_REVOKED</code>. "Assistant details" shows agent ID, owner, AI model, instructions ID (prompt hash) and signing key fingerprint.</td>
-        </tr>
-        <tr>
-          <th>Controls Repository</th>
-          <td>The principal's delegated authority as bounded capability: permitted action types, decision logic, escalation conditions, validity period, principal authority, and a kill switch.</td>
-          <td><code>lib/safr/controls.ts</code>: <code>loadMandate</code>, <code>saveMandate</code> (validates, bumps version), budget holds (<code>reserve</code>, <code>settle</code>, <code>releaseReservation</code>, <code>remainingBudget</code>), <code>recentPurchaseCount</code>. Type <code>Mandate</code> in <code>lib/types.ts</code>; seed <code>lib/mandate.demo.json</code>. Permitted action types and principal authority are on the registry record (<code>allowed_action_types</code>, <code>principals</code>).</td>
-          <td>Step 0: "Edit spending limits". Section "02 · Spending limits" shows Budget left, Ask me above, Total budget, Currency, categories and dates. <span class="tag tag-todo">Not yet built</span> the kill switch has no control or display in the app (step 7 uses the terminal).</td>
-        </tr>
-        <tr>
-          <th>Disposition Engine</th>
-          <td>Deterministic, ordered evaluation that produces the outcome. The model does not decide.</td>
-          <td><code>lib/safr/disposition.ts</code>: <code>dispose()</code> is a pure function with no I/O and no LLM. Ordered checks; the first Deny wins; non-blocking rules accumulate and the strongest sets the outcome. Full order in <a href="#rules">5d</a>.</td>
-          <td>Every step: the badge and the reason sentence come from here; the agent only relays them.</td>
-        </tr>
-        <tr>
-          <th>Audit Log</th>
-          <td>Append-only and tamper-evident; written before execution; includes rejected actions; independent of the agent's own narrative.</td>
-          <td><code>lib/safr/audit.ts</code>: <code>append</code> (row hash = SHA-256 of previous hash plus canonical <code>{ seq, ts, envelope, disposition }</code>), <code>verifyChain</code>, <code>markExecuted</code>. <code>gate.ts</code> appends before any checkout call. Table <code>audit</code> in <code>data/safr.db</code>.</td>
-          <td>"05 · Activity" lists every decision, Deny included, under a "Records match" badge. Step 9: "Tamper with a record" turns it into "A record was changed".</td>
-        </tr>
-        <tr>
-          <th>Four outcomes</th>
-          <td>Deny, Escalate, Auto-Execute, Observe.</td>
-          <td><code>Decision</code> in <code>lib/types.ts</code>: <code>DENY</code>, <code>ESCALATE</code>, <code>AUTO_EXECUTE</code>, <code>OBSERVE</code>. App labels: "Not allowed", "Needs your approval", "Allowed", "Already checked".</td>
-          <td>Steps 1 (Auto-Execute), 2 (Escalate), 3 to 5 and 7 to 8 (Deny), 6 (Observe).</td>
-        </tr>
-        <tr>
-          <th>Multi-step independence</th>
-          <td>No authority carries over from one action to the next.</td>
-          <td>Every <code>proposeCheckout</code> re-reads the quote from Reap, reloads the mandate, rebuilds and re-signs the envelope and runs every rule again. An approval can be claimed once (<code>claim()</code> only moves <code>PENDING</code> forward once), and approving re-runs every rule.</td>
-          <td>Step 6: the same book again is judged fresh and flagged <code>VELOCITY</code>. Test: "approval re-checks every rule: revoked in the meantime → DENY and release".</td>
-        </tr>
-        <tr>
-          <th>Human reviewer: timeout</th>
-          <td>A human review step needs a bounded window.</td>
-          <td><code>APPROVAL_WINDOW_MS</code> = 5 minutes in <code>gate.ts</code>; <code>expireStaleApprovals</code> logs <span class="badge b-deny">DENY</span> <code>APPROVAL_TIMEOUT</code> and releases the budget hold.</td>
-          <td>Step 2: the Permission card counts down from 5:00.</td>
-        </tr>
-        <tr>
-          <th>Human reviewer: authority</th>
-          <td>The reviewer's answer must apply to exactly what they reviewed, and be recorded.</td>
-          <td>The <code>approvals</code> table is keyed by envelope hash. <code>approve()</code> takes what to buy from the audit log, never from the request. A refreshed quote with a different merchant, items or currency, or a higher amount, is denied <code>QUOTE_CHANGED</code>. The reviewer's name is stored ("You" from the app).</td>
-          <td>Step 2: Approve gives <span class="badge b-auto">AUTO_EXECUTE</span> with rules <code>OVER_AUTO_THRESHOLD</code>, <code>HUMAN_APPROVED</code>.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <div class="concept-list"><details class="disclosure concept"><summary><h3>Governance Envelope</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>A structured record of the proposed action, its action trace and context metadata, filled by the checkpoint rather than the agent, and protected against change.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>lib/safr/envelope.ts</code>: <code>buildEnvelope</code> fills every field from the quote, catalog, mandate and registry; <code>hashEnvelope</code> (SHA-256 of canonical JSON); <code>signEnvelope</code> (Ed25519 over the hash). Type <code>Envelope</code> in <code>lib/types.ts</code>. The agent supplies only <code>quoteId</code> and <code>reason</code>.</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Panel section "03 · Purchase details": the latest record with a "Signed by the assistant" badge; "Technical details" shows the full JSON including <code>context.toolTrace</code>.</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Agent Identity</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>Verify the agent before any other evaluation: registered, active, authentic, allowed this tool and action type, acting for this principal. An identity failure is rejected before Controls are consulted.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>lib/safr/registry.ts</code> (<code>getAgent</code>, <code>setAgentStatus</code>, <code>registerPublicKey</code>, <code>authorizeToolCall</code> for the tool allowlist); <code>verifyEnvelope</code> in <code>envelope.ts</code>; <code>checkIdentity</code> in <code>disposition.ts</code>. In <code>gate.ts</code>, <code>decide()</code> returns on an identity failure before the budget and velocity queries run or <code>dispose()</code> is called. (The mandate is loaded earlier, only to fill the envelope.)</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Step 8: "Pause assistant" then any purchase gives <span class="badge b-deny">DENY</span> <code>IDENTITY_REVOKED</code>. "Assistant details" shows agent ID, owner, AI model, instructions ID (prompt hash) and signing key fingerprint.</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Controls Repository</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>The principal's delegated authority as bounded capability: permitted action types, decision logic, escalation conditions, validity period, principal authority, and a kill switch.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>lib/safr/controls.ts</code>: <code>loadMandate</code>, <code>saveMandate</code> (validates, bumps version), budget holds (<code>reserve</code>, <code>settle</code>, <code>releaseReservation</code>, <code>remainingBudget</code>), <code>recentPurchaseCount</code>. Type <code>Mandate</code> in <code>lib/types.ts</code>; seed <code>lib/mandate.demo.json</code>. Permitted action types and principal authority are on the registry record (<code>allowed_action_types</code>, <code>principals</code>).</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Step 0: "Edit spending limits". Section "02 · Spending limits" shows Budget left, Ask me above, Total budget, Currency, categories and dates. <span class="tag tag-todo">Not yet built</span> the kill switch has no control or display in the app (step 7 uses the terminal).</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Disposition Engine</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>Deterministic, ordered evaluation that produces the outcome. The model does not decide.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>lib/safr/disposition.ts</code>: <code>dispose()</code> is a pure function with no I/O and no LLM. Ordered checks; the first Deny wins; non-blocking rules accumulate and the strongest sets the outcome. Full order in <a href="#rules">5d</a>.</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Every step: the badge and the reason sentence come from here; the agent only relays them.</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Audit Log</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>Append-only and tamper-evident; written before execution; includes rejected actions; independent of the agent's own narrative.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>lib/safr/audit.ts</code>: <code>append</code> (row hash = SHA-256 of previous hash plus canonical <code>{ seq, ts, envelope, disposition }</code>), <code>verifyChain</code>, <code>markExecuted</code>. <code>gate.ts</code> appends before any checkout call. Table <code>audit</code> in <code>data/safr.db</code>.</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>"05 · Activity" lists every decision, Deny included, under a "Records match" badge. Step 9: "Tamper with a record" turns it into "A record was changed".</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Four outcomes</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>Deny, Escalate, Auto-Execute, Observe.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>Decision</code> in <code>lib/types.ts</code>: <code>DENY</code>, <code>ESCALATE</code>, <code>AUTO_EXECUTE</code>, <code>OBSERVE</code>. App labels: "Not allowed", "Needs your approval", "Allowed", "Already checked".</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Steps 1 (Auto-Execute), 2 (Escalate), 3 to 5 and 7 to 8 (Deny), 6 (Observe).</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Multi-step independence</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>No authority carries over from one action to the next.</p></div><div><h4 class="detail-label">Our implementation</h4><p>Every <code>proposeCheckout</code> re-reads the quote from Reap, reloads the mandate, rebuilds and re-signs the envelope and runs every rule again. An approval can be claimed once (<code>claim()</code> only moves <code>PENDING</code> forward once), and approving re-runs every rule.</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Step 6: the same book again is judged fresh and flagged <code>VELOCITY</code>. Test: "approval re-checks every rule: revoked in the meantime → DENY and release".</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Human reviewer: timeout</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>A human review step needs a bounded window.</p></div><div><h4 class="detail-label">Our implementation</h4><p><code>APPROVAL_WINDOW_MS</code> = 5 minutes in <code>gate.ts</code>; <code>expireStaleApprovals</code> logs <span class="badge b-deny">DENY</span> <code>APPROVAL_TIMEOUT</code> and releases the budget hold.</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Step 2: the Permission card counts down from 5:00.</p></div></div></details>
+<details class="disclosure concept"><summary><h3>Human reviewer: authority</h3></summary><div class="detail-body concept-body"><div><h4 class="detail-label">The idea in the paper</h4><p>The reviewer's answer must apply to exactly what they reviewed, and be recorded.</p></div><div><h4 class="detail-label">Our implementation</h4><p>The <code>approvals</code> table is keyed by envelope hash. <code>approve()</code> takes what to buy from the audit log, never from the request. A refreshed quote with a different merchant, items or currency, or a higher amount, is denied <code>QUOTE_CHANGED</code>. The reviewer's name is stored ("You" from the app).</p></div><div class="demo-evidence"><h4 class="detail-label">Look for this in the demo</h4><p>Step 2: Approve gives <span class="badge b-auto">AUTO_EXECUTE</span> with rules <code>OVER_AUTO_THRESHOLD</code>, <code>HUMAN_APPROVED</code>.</p></div></div></details></div>
 
   <h3>Integration pattern</h3>
   <p>AgentCart uses SAFR's <strong>native integration</strong> pattern: the agent itself is instrumented to emit a proposal through <code>proposeCheckout</code>, and the gate builds the envelope from it. The alternative, the <strong>gateway</strong> pattern, suits existing agents that already call a payment API: the checkpoint sits in the network path and intercepts those calls instead. Same four components, different insertion point. In AgentCart there is also no public route that creates a checkout (<code>app/api/checkout/route.ts</code> exports <code>GET</code> only), so the gate is the only path to Reap's checkout either way.</p>
@@ -420,8 +607,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <p><span class="tag tag-verify">Not yet verified</span> In the default sandbox setup the adapter sends <code>X-Simulate-Checkout: COMPLETED</code> (<code>REAP_SIMULATE_CHECKOUT</code> defaults to <code>true</code>, and the header is only sent when the base URL contains "sandbox" and <code>NODE_ENV</code> is not <code>production</code>). That skips Reap's hosted approval page, so checkouts complete straight away. Set <code>REAP_SIMULATE_CHECKOUT=false</code> to show the hosted page: the app then shows a "Review on Reap" button and Reap returns to <code>/orders/done?envelopeHash=…</code>. That path is built but <code>NOTES.md</code> does not record an end-to-end run, so rehearse it before relying on it on camera.</p>
   </div>
 
-  <h3>What we deliberately did not implement</h3>
-  <p>Being clear about the edges is part of the design:</p>
+  <details class="disclosure"><summary><h3>What we deliberately did not implement</h3></summary><div class="detail-body"><p>Being clear about the edges is part of the design:</p>
   <ul>
     <li><strong>Open-network identity resolution.</strong> The agent is looked up by ID in our own SQLite registry. There is no discovery of agents run by other organisations and no certificate chain to an outside authority.</li>
     <li><strong>Multiple registries.</strong> One registry, one agent (<code>purchasing-agent-v1</code>), one principal (<code>demo-user-001</code>).</li>
@@ -430,14 +616,15 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <li><strong>Reviewer authentication.</strong> <code>POST /api/approvals</code> accepts any reviewer name of 1 to 100 characters; the app sends "You". No route has user authentication; the chat, state and tamper routes check the request comes from the same origin.</li>
     <li><strong>Independent key custody.</strong> The private key (<code>AGENT_PRIVATE_KEY</code>) is held by the same server that verifies it. The signature proves the record was not altered after sealing and binds it to the registered key; it does not prove a separate agent runtime produced it.</li>
     <li><strong>An external anchor for the log.</strong> The chain lives in the same SQLite file the app writes, so it is tamper-evident, not tamper-proof: someone with the file could rebuild the whole chain. Publishing the latest hash somewhere else is the next step.</li>
-  </ul>
+  </ul></div></details>
 </section>
 
 <!-- ============================== 5. Architecture ============================== -->
 <section id="architecture" class="runbook">
-  <h2><span class="num">5</span>Architecture</h2>
+  <div class="section-kicker"><span class="num">05</span><span>The system</span></div>
+<h2>A checkpoint before checkout</h2><p class="section-intro">One governed path from a shopping request to a confirmed order.</p>
 
-  <h3>5a. The flow</h3>
+  <div class="diagram-topline"><h3>The system at a glance</h3><span>Every path to payment passes through the gate.</span></div>
   <figure>
     <div class="diagram-wrap">
       <svg class="diagram" viewBox="0 0 880 676" role="img" aria-labelledby="arch-title arch-desc">
@@ -578,8 +765,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <figcaption>Deny is logged and never reaches Reap. Escalate holds the money and waits for a human; an approval is re-checked and continues as Auto-execute. Nothing counts as ordered until <code>GET /agentic/checkouts/:id</code> returns <code>COMPLETED</code>.</figcaption>
   </figure>
 
-  <h3>5b. The SAFR components, file by file</h3>
-  <div class="table-wrap">
+  <details class="disclosure"><summary><h3>5b. The SAFR components, file by file</h3></summary><div class="detail-body"><div class="table-wrap">
     <table class="compact">
       <thead><tr><th style="width:26%">File</th><th style="width:20%">Role</th><th>What it does</th></tr></thead>
       <tbody>
@@ -593,10 +779,8 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
         <tr><td><code>lib/safr/reap-adapter.ts</code></td><td>Door to Reap</td><td>Re-exports the <code>reapAdapter</code> from <code>lib/reap/</code>. <code>lib/safr/mock-reap.ts</code> is the in-memory stand-in used by the tests.</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <h3>5c. The Governance Envelope</h3>
-  <p>The real type from <code>lib/types.ts</code>:</p>
+  </div></div></details>
+<details class="disclosure"><summary><h3>5c. The Governance Envelope</h3></summary><div class="detail-body"><p>The real type from <code>lib/types.ts</code>:</p>
 <pre><code>export type Envelope = {
   envelopeId: string;
   schemaVersion: "1.0";
@@ -640,10 +824,8 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
         <tr><td><code>hash</code>, <code>signature</code></td><td>SHA-256 of the canonical JSON (keys sorted, without <code>hash</code> and <code>signature</code>); Ed25519 signature over that hash with <code>AGENT_PRIVATE_KEY</code>, base64.</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <h3 id="rules">5d. Disposition rules, in evaluation order</h3>
-  <p>From <code>lib/safr/disposition.ts</code>. The first Deny wins. Placeholders in braces are filled from the envelope and mandate; money is shown as <code>S$10.79</code> or <code>US$58.00</code>.</p>
+  </div></div></details>
+<details class="disclosure"><summary><h3 id="rules">5d. Disposition rules, in evaluation order</h3></summary><div class="detail-body"><p>From <code>lib/safr/disposition.ts</code>. The first Deny wins. Placeholders in braces are filled from the envelope and mandate; money is shown as <code>S$10.79</code> or <code>US$58.00</code>.</p>
   <div class="table-wrap">
     <table class="compact">
       <thead><tr><th class="nowrap">#</th><th>Rule ID</th><th>Outcome</th><th>Reason the user sees</th></tr></thead>
@@ -682,10 +864,8 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
       </tbody>
     </table>
   </div>
-  <p class="small muted">Separately, the registry logs a <code>TOOL_DENIED</code> event when the model calls a tool that is not on its allowlist; the panel shows these under "Shopping action blocked".</p>
-
-  <h3>5e. The agent's three tools</h3>
-  <div class="table-wrap">
+  <p class="small muted">Separately, the registry logs a <code>TOOL_DENIED</code> event when the model calls a tool that is not on its allowlist; the panel shows these under "Shopping action blocked".</p></div></details>
+<details class="disclosure"><summary><h3>5e. The agent's three tools</h3></summary><div class="detail-body"><div class="table-wrap">
     <table class="compact">
       <thead><tr><th style="width:30%">Tool (input)</th><th>What it does</th></tr></thead>
       <tbody>
@@ -695,10 +875,8 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
       </tbody>
     </table>
   </div>
-  <p>Every call goes through <code>lib/agent/router.ts</code> (<code>dispatchTool</code>), which asks the registry first. <strong>Why there is no checkout tool:</strong> if the model had one, every control would depend on the model choosing to respect it. Without one, the worst a confused or manipulated model can do is ask, and asking is governed. There is no HTTP route that creates a checkout either.</p>
-
-  <h3>5f. Request lifecycle</h3>
-  <ol class="steps">
+  <p>Every call goes through <code>lib/agent/router.ts</code> (<code>dispatchTool</code>), which asks the registry first. <strong>Why there is no checkout tool:</strong> if the model had one, every control would depend on the model choosing to respect it. Without one, the worst a confused or manipulated model can do is ask, and asking is governed. There is no HTTP route that creates a checkout either.</p></div></details>
+<details class="disclosure"><summary><h3>5f. Request lifecycle</h3></summary><div class="detail-body"><ol class="steps">
     <li><strong>User message.</strong> The browser posts to <code>POST /api/agent</code> (same-origin check, at most 40 messages, session cookie <code>agentcart_session</code>). The server adds the system prompt and the current spending limits read from SQLite, then streams the model with the three tools and <code>stopWhen: stepCountIs(6)</code>.</li>
     <li><strong><code>listCatalog</code></strong> through the router: allowlist check, a <code>tool_calls</code> row, catalog items back.</li>
     <li><strong><code>getQuote</code></strong>: <code>POST /agentic/quotes</code> with <code>externalCheckout: { merchantDomain, checkoutUrl }</code> (the catalog permalink, quantity rewritten), an <code>Idempotency-Key</code>, <code>DEMO_EMAIL</code> and the demo shipping address. If Reap answers <code>CHECKOUT_URL_INVALID</code>, it retries with <code>items: [{ variantId }]</code>. Amounts become cents in <code>toCents</code>; merchant, SKU and quantity go into <code>reap_quotes</code>.</li>
@@ -720,10 +898,8 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <li><strong>Poll.</strong> <code>/orders/done</code> calls <code>GET /api/checkout?envelopeHash=…</code> every 2 seconds (the chat's order card uses <code>?checkoutId=…</code>). The route maps the hash to the checkout through the audit log (<code>checkoutIdForEnvelope</code>) and calls <code>GET /agentic/checkouts/:id</code>.</li>
     <li><strong><code>recordCheckoutOutcome</code></strong>: <code>COMPLETED</code> settles the hold (the money counts as spent); <code>FAILED</code> or <code>EXPIRED</code> releases it. Only <code>COMPLETED</code> shows "Order confirmed: {orderId} · {amount}".</li>
   </ol>
-  <p class="note">The return URL carries <code>envelopeHash</code>, not <code>checkoutId</code>. The hash exists before Reap answers, and the server maps it back to the checkout through its own log, so the browser never supplies the ID that gets checked.</p>
-
-  <h3>5g. Tech stack</h3>
-  <div class="table-wrap">
+  <p class="note">The return URL carries <code>envelopeHash</code>, not <code>checkoutId</code>. The hash exists before Reap answers, and the server maps it back to the checkout through its own log, so the browser never supplies the ID that gets checked.</p></div></details>
+<details class="disclosure"><summary><h3>5g. Tech stack</h3></summary><div class="detail-body"><div class="table-wrap">
     <table class="compact">
       <thead><tr><th style="width:24%">Layer</th><th>Choice (versions from <code>package.json</code>)</th></tr></thead>
       <tbody>
@@ -739,12 +915,13 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
         <tr><td>Runtime</td><td>Node 20.9 or newer (tested on Node 24)</td></tr>
       </tbody>
     </table>
-  </div>
+  </div></div></details>
 </section>
 
 <!-- ============================== 6. Setup ============================== -->
 <section id="setup" class="runbook">
-  <h2><span class="num">6</span>Setup</h2>
+  <div class="section-kicker"><span class="num">06</span><span>The demo</span></div>
+<h2>Get ready to run</h2>
   <p>About 10 minutes on a fresh laptop. Every command runs from the repository root.</p>
 
   <h3>Prerequisites</h3>
@@ -754,19 +931,14 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <li>An OpenAI-compatible API key for a model that supports tool calling.</li>
   </ul>
 
-  <h3>1. Clone and install</h3>
-<pre><code>git clone https://github.com/terence-c/reap-hackathon-09oct.git
+  <details class="disclosure setup-step" open><summary><span class="setup-number">01</span><h3>Clone and install</h3></summary><div class="detail-body"><pre><code>git clone https://github.com/terence-c/reap-hackathon-09oct.git
 cd reap-hackathon-09oct
 npm install</code></pre>
-  <p class="small muted">This document matches commit <code>5fe4e50</code>. If <code>git log</code> in your clone does not include it, that work has not reached <code>main</code> yet.</p>
-
-  <h3>2. Check the SQLite driver</h3>
-<pre><code>node -e "new (require('better-sqlite3'))(':memory:')"</code></pre>
+  <p class="small muted">This document matches commit <code>5fe4e50</code>. If <code>git log</code> in your clone does not include it, that work has not reached <code>main</code> yet.</p></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">02</span><h3>Check the SQLite driver</h3></summary><div class="detail-body"><pre><code>node -e "new (require('better-sqlite3'))(':memory:')"</code></pre>
   <p>No output means it works. If it errors and <code>npm config get ignore-scripts</code> prints <code>true</code>, the native build never ran:</p>
-<pre><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code></pre>
-
-  <h3>3. Environment</h3>
-<pre><code>cp .env.example .env.local</code></pre>
+<pre><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code></pre></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">03</span><h3>Environment</h3></summary><div class="detail-body"><pre><code>cp .env.example .env.local</code></pre>
   <p>Never commit <code>.env.local</code>; the repository is public. The dev server boots with every key blank, because Reap and LLM keys are checked only when first used.</p>
   <div class="table-wrap">
     <table class="compact">
@@ -787,38 +959,27 @@ npm install</code></pre>
         <tr><td><code>OPENAI_MODEL</code></td><td>Model name; must support tool calling. Change together with <code>OPENAI_BASE_URL</code></td><td>Preset</td><td><code>gpt-6-luna</code></td><td>No</td><td>Default</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <h3>4. Register the agent's key</h3>
-<pre><code>npm run keygen</code></pre>
-  <p>Registers the public key on the agent's record in <code>data/safr.db</code> and prints its fingerprint. If <code>AGENT_PRIVATE_KEY</code> is empty it mints a key pair and prints an <code>AGENT_PRIVATE_KEY=…</code> line: paste it into <code>.env.local</code>. If the variable is set it reuses it, so re-running is safe. <code>npm run keygen -- --new</code> always mints a new pair (the old key stops verifying).</p>
-
-  <h3>5. Start the app on local HTTPS</h3>
-  <p><code>npm run dev:https</code> serves the certificate in <code>./certificates/</code> (gitignored, so a fresh clone has none). Create it once; it is valid for 30 days:</p>
+  </div></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">04</span><h3>Register the agent's key</h3></summary><div class="detail-body"><pre><code>npm run keygen</code></pre>
+  <p>Registers the public key on the agent's record in <code>data/safr.db</code> and prints its fingerprint. If <code>AGENT_PRIVATE_KEY</code> is empty it mints a key pair and prints an <code>AGENT_PRIVATE_KEY=…</code> line: paste it into <code>.env.local</code>. If the variable is set it reuses it, so re-running is safe. <code>npm run keygen -- --new</code> always mints a new pair (the old key stops verifying).</p></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">05</span><h3>Start the app on local HTTPS</h3></summary><div class="detail-body"><p><code>npm run dev:https</code> serves the certificate in <code>./certificates/</code> (gitignored, so a fresh clone has none). Create it once; it is valid for 30 days:</p>
 <pre><code>mkdir -p certificates
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 30 -subj "/CN=localhost" \
   -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
   -keyout certificates/localhost-key.pem -out certificates/localhost.pem
 npm run dev:https          <span class="c"># https://localhost:3443</span></code></pre>
-  <p>The certificate is self-signed, so the browser warns on the first visit: choose Advanced, then Proceed to localhost. Do this once before adding a card, so Reap's redirect back lands straight in the app. The repository does not record the exact command its authors used; this one produces the same kind of certificate (RSA 2048, <code>CN=localhost</code>, names <code>localhost</code> and <code>127.0.0.1</code>). Reap only sends people back to HTTPS addresses and it accepts <code>https://localhost</code>, so <strong>no tunnel is needed</strong>. The original plan used ngrok; <code>NOTES.md</code> records that Reap accepts <code>https://localhost:3443</code>, so it was dropped. Only if that ever changes: run a tunnel that gives a public HTTPS URL and set <code>APP_BASE_URL</code> to it. Plain <code>npm run dev</code> (http://localhost:3000) is fine for UI work but cannot add a card or complete a checkout; if another server already owns <code>localhost:3000</code>, open http://127.0.0.1:3000 instead (allowed in <code>next.config.ts</code>).</p>
-
-  <h3>6. Add the payment card</h3>
-  <p><strong>From the app:</strong> in "01 · Payment card" click <strong>Add card</strong>. The app calls <code>POST /api/enrollment</code>, which creates an EXTERNAL enrollment and sends you to Reap's hosted page. Enter the Reap sandbox test card (OTP <code>456789</code> if asked). Reap returns you to <code>/orders/enrollment-done</code>, which polls <code>GET /api/enrollment</code> until Reap says <code>ACTIVE</code>; the panel then shows "Card ready". AgentCart never sees the card details. Each Reap link works once: if Reap says the session was used, click <strong>Start again</strong> in the panel.</p>
+  <p>The certificate is self-signed, so the browser warns on the first visit: choose Advanced, then Proceed to localhost. Do this once before adding a card, so Reap's redirect back lands straight in the app. The repository does not record the exact command its authors used; this one produces the same kind of certificate (RSA 2048, <code>CN=localhost</code>, names <code>localhost</code> and <code>127.0.0.1</code>). Reap only sends people back to HTTPS addresses and it accepts <code>https://localhost</code>, so <strong>no tunnel is needed</strong>. The original plan used ngrok; <code>NOTES.md</code> records that Reap accepts <code>https://localhost:3443</code>, so it was dropped. Only if that ever changes: run a tunnel that gives a public HTTPS URL and set <code>APP_BASE_URL</code> to it. Plain <code>npm run dev</code> (http://localhost:3000) is fine for UI work but cannot add a card or complete a checkout; if another server already owns <code>localhost:3000</code>, open http://127.0.0.1:3000 instead (allowed in <code>next.config.ts</code>).</p></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">06</span><h3>Add the payment card</h3></summary><div class="detail-body"><p><strong>From the app:</strong> in "01 · Payment card" click <strong>Add card</strong>. The app calls <code>POST /api/enrollment</code>, which creates an EXTERNAL enrollment and sends you to Reap's hosted page. Enter the Reap sandbox test card (OTP <code>456789</code> if asked). Reap returns you to <code>/orders/enrollment-done</code>, which polls <code>GET /api/enrollment</code> until Reap says <code>ACTIVE</code>; the panel then shows "Card ready". AgentCart never sees the card details. Each Reap link works once: if Reap says the session was used, click <strong>Start again</strong> in the panel.</p>
   <p><strong>From the terminal:</strong></p>
 <pre><code>npm run enroll</code></pre>
-  <p>The script creates the enrollment (this is where the enrollment ID comes from), prints <code>Enrollment ID: …</code> and <code>Hosted card-entry URL: …</code>, and waits up to 10 minutes. A person opens the URL and enters the test card; when Reap reports <code>ACTIVE</code> the script prints <code>REAP_ENROLLMENT_ID=…</code>. The enrollment is also saved in <code>data/safr.db</code>, so the app uses it straight away; paste the line into <code>.env.local</code> only for <code>npm run smoke</code> or another laptop.</p>
-
-  <h3>7. Run the tests</h3>
-<pre><code>npm test                   <span class="c"># vitest: 66 passed (6 files)</span></code></pre>
-  <p>The tests use an in-memory database and the mock Reap adapter, so they never touch <code>data/safr.db</code> or the network.</p>
-
-  <h3>8. Optional live checks</h3>
-<pre><code>npm run e2e                <span class="c"># quote, checkout, wait for COMPLETED; prints the orderId</span>
+  <p>The script creates the enrollment (this is where the enrollment ID comes from), prints <code>Enrollment ID: …</code> and <code>Hosted card-entry URL: …</code>, and waits up to 10 minutes. A person opens the URL and enters the test card; when Reap reports <code>ACTIVE</code> the script prints <code>REAP_ENROLLMENT_ID=…</code>. The enrollment is also saved in <code>data/safr.db</code>, so the app uses it straight away; paste the line into <code>.env.local</code> only for <code>npm run smoke</code> or another laptop.</p></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">07</span><h3>Run the tests</h3></summary><div class="detail-body"><pre><code>npm test                   <span class="c"># vitest: 66 passed (6 files)</span></code></pre>
+  <p>The tests use an in-memory database and the mock Reap adapter, so they never touch <code>data/safr.db</code> or the network.</p></div></details>
+<details class="disclosure setup-step"><summary><span class="setup-number">08</span><h3>Optional live checks</h3></summary><div class="detail-body"><pre><code>npm run e2e                <span class="c"># quote, checkout, wait for COMPLETED; prints the orderId</span>
 npm run smoke              <span class="c"># the demo script through the real gate and sandbox; PASS / FAIL / SKIP per step</span>
 npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one SKU</span></code></pre>
-  <p class="small"><code>npm run e2e</code> charges the card saved in the app or <code>REAP_ENROLLMENT_ID</code>. <code>npm run smoke</code> uses its own in-memory database and needs <code>REAP_ENROLLMENT_ID</code> and <code>AGENT_PRIVATE_KEY</code>. Both create real sandbox checkouts (no real money).</p>
-
-  <h3>You are ready when</h3>
+  <p class="small"><code>npm run e2e</code> charges the card saved in the app or <code>REAP_ENROLLMENT_ID</code>. <code>npm run smoke</code> uses its own in-memory database and needs <code>REAP_ENROLLMENT_ID</code> and <code>AGENT_PRIVATE_KEY</code>. Both create real sandbox checkouts (no real money).</p></div></details>
+<h3>You are ready when</h3>
   <ul class="check">
     <li><code>npm test</code> reports 66 passed.</li>
     <li>https://localhost:3443 loads (certificate warning accepted once); the header says "Assistant ready" and "Reap sandbox".</li>
@@ -832,7 +993,8 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
 
 <!-- ============================== 7. Identities ============================== -->
 <section id="identities" class="runbook">
-  <h2><span class="num">7</span>Demo accounts and identities</h2>
+  <div class="section-kicker"><span class="num">07</span><span>The demo</span></div>
+<h2>Accounts &amp; identities</h2>
   <p>Values marked <span class="tag tag-secret">Secret</span> never appear on video.</p>
   <div class="table-wrap">
     <table class="compact">
@@ -860,30 +1022,12 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
 
 <!-- ============================== 8. Demo flow ============================== -->
 <section id="demo-flow" class="runbook">
-  <h2><span class="num">8</span>Demo flow: the script for the video</h2>
+  <div class="section-kicker"><span class="num">08</span><span>The demo</span></div>
+<h2>Walk through the demo</h2><p class="section-intro">Keep this guide beside the app. Follow the actions, watch the outcome, and tell the story.</p>
 
-  <h3>The catalog</h3>
-  <p>All eight items from <code>lib/catalog.json</code>. Prices are catalog unit prices; the gate always judges Reap's quoted total, which adds delivery and tax. Delivery varies by merchant, so the totals on screen will be higher than these.</p>
-  <div class="table-wrap">
-    <table class="compact">
-      <thead><tr><th>SKU</th><th>Name</th><th>Merchant</th><th>Category</th><th>Unit price</th><th>Step</th></tr></thead>
-      <tbody>
-        <tr><td><code>popular-ghost-stories-12</code></td><td>True Singapore Ghost Stories Book 12</td><td>popular.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$10.79</td><td>1, 6, 7, 8</td></tr>
-        <tr><td><code>byndartisan-luggage-tag</code></td><td>Wabisabi Luggage Tag - Brown/Oat</td><td>byndartisan.com</td><td>Books &amp; Stationery</td><td class="nowrap">S$85.00</td><td>2</td></tr>
-        <tr><td><code>picketandrail-geometry-table</code></td><td>Geometry 12 Custom Table - Cantilever</td><td>picketandrail.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$699.00</td><td>3</td></tr>
-        <tr><td><code>zmdesktop-laptop-stand</code></td><td>Modular Space-Saving Laptop Stand (2025) - Black Walnut</td><td>zmdesktop.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">US$58.00</td><td>4</td></tr>
-        <tr><td><code>brewlander-6pack</code></td><td>SG LAHger - 6 Pack</td><td>brewlander.com</td><td>Drinks &amp; Alcohol</td><td class="nowrap">S$33.00</td><td>5</td></tr>
-        <tr><td><code>ergotune-pegboard</code></td><td>F-Clamp Pegboard Panel - Black</td><td>ergotune.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$59.00</td><td>spare</td></tr>
-        <tr><td><code>boxgreen-snack-bag</code></td><td>The Trio Big Bag of Snacks</td><td>boxgreen.co</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$50.00</td><td>spare</td></tr>
-        <tr><td><code>kinokuniya-conan-106</code></td><td>名偵探柯南 (106)</td><td>kinokuniya.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$9.40</td><td>spare</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="small">The empty chat shows six numbered tiles that send the script in order: 01 "Buy the True Singapore Ghost Stories Book 12", 02 "Buy the Wabisabi Luggage Tag", 03 "Buy the Geometry 12 Custom Table", 04 "Buy the Modular Space-Saving Laptop Stand", 05 "Buy the SG LAHger beer 6-pack", 06 "Buy the True Singapore Ghost Stories Book 12 again". After the first message they stay available as chips under the chat. Typing the lines below works the same.</p>
-
-  <h3>The script</h3>
+  <h3 id="demo-script">The walkthrough</h3>
   <p class="small">Panel labels: <span class="badge b-auto">Allowed</span> = <code>AUTO_EXECUTE</code>, <span class="badge b-esc">Needs your approval</span> = <code>ESCALATE</code>, <span class="badge b-deny">Not allowed</span> = <code>DENY</code>, <span class="badge b-obs">Already checked</span> = <code>OBSERVE</code>. Rules fired are under "Technical details" in "04 · Permission". The agent's exact words vary; the column below says what it is instructed to say.</p>
-  <div class="print-wide">
+  <div class="print-wide flow-source">
   <div class="table-wrap">
     <table class="flow">
       <thead><tr><th>Step</th><th style="width:14%">You type or click</th><th style="width:14%">The agent says</th><th style="width:21%">The SAFR panel shows</th><th style="width:17%">On Reap's side</th><th style="width:17%">Narration</th><th style="width:10%">Scenario</th></tr></thead>
@@ -987,6 +1131,26 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
     <p><strong>Step notes.</strong> Step 6 needs the real clock to be within 15 minutes of step 1's proposal, or it will be an ordinary Allowed. If delivery fees have used up more of the budget than expected, step 6 shows <code>OVER_REMAINING_BUDGET</code> instead. The category rule in step 5 is covered by <code>tests/gate.test.ts</code> ("demo script, in order") and <code>tests/disposition.test.ts</code> ("beer S$33 → DENY CATEGORY_OUT_OF_SCOPE"). In steps 7 and 8 the gate stops the book before any budget or velocity rule, so the repeat does not matter. The agent is shown its current limits, kill switch included; if it declines to ask in step 7, reply "Ask for permission anyway": the point is that the gate, not the agent, stops it. Do not run <code>npm run reset-demo</code> between steps; it empties the log.</p>
   </div>
 
+<details class="disclosure"><summary><h3>The catalog: 8 items</h3></summary><div class="detail-body">
+  <p>All eight items from <code>lib/catalog.json</code>. Prices are catalog unit prices; the gate always judges Reap's quoted total, which adds delivery and tax. Delivery varies by merchant, so the totals on screen will be higher than these.</p>
+  <div class="table-wrap">
+    <table class="compact">
+      <thead><tr><th>SKU</th><th>Name</th><th>Merchant</th><th>Category</th><th>Unit price</th><th>Step</th></tr></thead>
+      <tbody>
+        <tr><td><code>popular-ghost-stories-12</code></td><td>True Singapore Ghost Stories Book 12</td><td>popular.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$10.79</td><td>1, 6, 7, 8</td></tr>
+        <tr><td><code>byndartisan-luggage-tag</code></td><td>Wabisabi Luggage Tag - Brown/Oat</td><td>byndartisan.com</td><td>Books &amp; Stationery</td><td class="nowrap">S$85.00</td><td>2</td></tr>
+        <tr><td><code>picketandrail-geometry-table</code></td><td>Geometry 12 Custom Table - Cantilever</td><td>picketandrail.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$699.00</td><td>3</td></tr>
+        <tr><td><code>zmdesktop-laptop-stand</code></td><td>Modular Space-Saving Laptop Stand (2025) - Black Walnut</td><td>zmdesktop.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">US$58.00</td><td>4</td></tr>
+        <tr><td><code>brewlander-6pack</code></td><td>SG LAHger - 6 Pack</td><td>brewlander.com</td><td>Drinks &amp; Alcohol</td><td class="nowrap">S$33.00</td><td>5</td></tr>
+        <tr><td><code>ergotune-pegboard</code></td><td>F-Clamp Pegboard Panel - Black</td><td>ergotune.com</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$59.00</td><td>spare</td></tr>
+        <tr><td><code>boxgreen-snack-bag</code></td><td>The Trio Big Bag of Snacks</td><td>boxgreen.co</td><td>Office &amp; Business Supplies</td><td class="nowrap">S$50.00</td><td>spare</td></tr>
+        <tr><td><code>kinokuniya-conan-106</code></td><td>名偵探柯南 (106)</td><td>kinokuniya.com.sg</td><td>Books &amp; Stationery</td><td class="nowrap">S$9.40</td><td>spare</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">The empty chat shows six numbered tiles that send the script in order: 01 "Buy the True Singapore Ghost Stories Book 12", 02 "Buy the Wabisabi Luggage Tag", 03 "Buy the Geometry 12 Custom Table", 04 "Buy the Modular Space-Saving Laptop Stand", 05 "Buy the SG LAHger beer 6-pack", 06 "Buy the True Singapore Ghost Stories Book 12 again". After the first message they stay available as chips under the chat. Typing the lines below works the same.</p>
+
+</div></details>
   <h3>Timing</h3>
   <div class="table-wrap">
     <table class="compact">
@@ -1003,7 +1167,8 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
 
 <!-- ============================== 9. Reset ============================== -->
 <section id="reset" class="runbook">
-  <h2><span class="num">9</span>Reset between takes</h2>
+  <div class="section-kicker"><span class="num">09</span><span>The demo</span></div>
+<h2>Ready for another take</h2>
   <h3>The one command</h3>
 <pre><code>npm run reset-demo</code></pre>
   <p>Empties <code>audit</code>, <code>reservations</code>, <code>approvals</code>, <code>tool_calls</code> and <code>reap_quotes</code>; restores <code>mandate-001</code> to <code>lib/mandate.demo.json</code> at version 1 (kill switch off); sets the agent to <code>ACTIVE</code>; refreshes the model and prompt hash. It keeps the registered public key and the saved card, and is safe while the dev server runs. Then <strong>reload the browser</strong>: the chat lives in the tab. Expected output:</p>
@@ -1011,8 +1176,7 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
 Agent key registered: yes
 Card ready: yes</code></pre>
 
-  <h3>What the app can do, and what needs the terminal</h3>
-  <div class="table-wrap">
+  <details class="disclosure"><summary><h3>What the app can do, and what needs the terminal</h3></summary><div class="detail-body"><div class="table-wrap">
     <table class="compact">
       <thead><tr><th style="width:28%">Task</th><th style="width:28%">In the app</th><th>Terminal</th></tr></thead>
       <tbody>
@@ -1026,92 +1190,46 @@ Card ready: yes</code></pre>
         <tr><td>Delete the SQLite file</td><td>No</td><td>See the full wipe below</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <h3>Kill switch from the terminal (step 7)</h3>
-  <p><code>POST /api/mandate</code> replaces the whole mandate with the body below (the demo values) and bumps the version. <code>-k</code> skips certificate checks for the local certificate.</p>
+  </div></div></details>
+<details class="disclosure"><summary><h3>Kill switch from the terminal (step 7)</h3></summary><div class="detail-body"><p><code>POST /api/mandate</code> replaces the whole mandate with the body below (the demo values) and bumps the version. <code>-k</code> skips certificate checks for the local certificate.</p>
 <pre><code><span class="c"># on</span>
 curl -sk -X POST https://localhost:3443/api/mandate \
   -H 'content-type: application/json' \
   -d '{"id":"mandate-001","principalId":"demo-user-001","currency":"SGD","totalBudget":15000,"autoThreshold":8000,"allowedCategories":["Office &amp; Business Supplies","Books &amp; Stationery"],"validFrom":"2026-10-09T00:00:00+08:00","validTo":"2026-10-10T23:59:59+08:00","killSwitch":true}'
 
-<span class="c"># off: the same command with "killSwitch":false</span></code></pre>
-
-  <h3>Agent status from the terminal</h3>
-<pre><code>curl -sk -X POST https://localhost:3443/api/registry \
-  -H 'content-type: application/json' -d '{"status":"ACTIVE"}'     <span class="c"># or "REVOKED"</span></code></pre>
-
-  <h3>Full wipe</h3>
-<pre><code><span class="c"># stop npm run dev:https first: it keeps the database open</span>
+<span class="c"># off: the same command with "killSwitch":false</span></code></pre></div></details>
+<details class="disclosure"><summary><h3>Agent status from the terminal</h3></summary><div class="detail-body"><pre><code>curl -sk -X POST https://localhost:3443/api/registry \
+  -H 'content-type: application/json' -d '{"status":"ACTIVE"}'     <span class="c"># or "REVOKED"</span></code></pre></div></details>
+<details class="disclosure"><summary><h3>Full wipe</h3></summary><div class="detail-body"><pre><code><span class="c"># stop npm run dev:https first: it keeps the database open</span>
 rm -f data/safr.db data/safr.db-wal data/safr.db-shm
 npm run keygen             <span class="c"># recreates the file and re-registers the public key from AGENT_PRIVATE_KEY</span>
 npm run dev:https</code></pre>
-  <p>The saved card lived in the deleted file, so click "Add card" again unless <code>REAP_ENROLLMENT_ID</code> is set in <code>.env.local</code>.</p>
-
-  <h3>If the Reap enrollment expired</h3>
-  <p>The panel shows "The link to add your card expired. Please start again." (or the failed or removed variant) with an "Add card" button: add the card again. While a card is still pending, the panel offers "Start again", because each Reap link works only once. If the panel still says "Card ready" but checkouts fail with "Reap could not create the checkout (…), so nothing was charged.", Reap has dropped the card on its side: add a new card; the newest <code>ACTIVE</code> enrollment is the one charged.</p>
-
-  <h3>If you record after 10 Oct 2026</h3>
+  <p>The saved card lived in the deleted file, so click "Add card" again unless <code>REAP_ENROLLMENT_ID</code> is set in <code>.env.local</code>.</p></div></details>
+<details class="disclosure"><summary><h3>If the Reap enrollment expired</h3></summary><div class="detail-body"><p>The panel shows "The link to add your card expired. Please start again." (or the failed or removed variant) with an "Add card" button: add the card again. While a card is still pending, the panel offers "Start again", because each Reap link works only once. If the panel still says "Card ready" but checkouts fail with "Reap could not create the checkout (…), so nothing was charged.", Reap has dropped the card on its side: add a new card; the newest <code>ACTIVE</code> enrollment is the one charged.</p></div></details>
+<h3>If you record after 10 Oct 2026</h3>
   <p>The demo mandate ends at <code>2026-10-10T23:59:59+08:00</code>; after that every purchase is <code>MANDATE_EXPIRED</code>. In the app, use "Edit spending limits" and move "Ends on". To make it stick across resets, change <code>validTo</code> in <code>lib/mandate.demo.json</code> and run <code>npm run reset-demo</code>.</p>
 </section>
 
 <!-- ============================== 10. Troubleshooting ============================== -->
 <section id="troubleshooting" class="runbook">
-  <h2><span class="num">10</span>Troubleshooting</h2>
+  <div class="section-kicker"><span class="num">10</span><span>The demo</span></div>
+<h2>Find a fix</h2>
   <p class="small">Server logs from <code>npm run dev:https</code> print every Reap request and response (<code>[Reap] request</code>, <code>[Reap] response</code>), plus <code>[agentcart]</code> and <code>[safr]</code> warnings.</p>
-  <div class="table-wrap">
-    <table class="compact">
-      <thead><tr><th style="width:19%">Symptom</th><th style="width:33%">Cause</th><th>Fix</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><strong>1. Quote rejected.</strong> The agent says Reap could not price the item.</td>
-          <td>Reap refused the merchant permalink (<code>CHECKOUT_URL_INVALID</code>), or the merchant is unavailable (brewlander.com returns 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code>). The log shows <code>[agentcart] getQuote failed for {sku}: …</code>.</td>
-          <td>On <code>CHECKOUT_URL_INVALID</code> the adapter already retries with <code>items: [{ variantId }]</code>; that path expects Reap's own discovery variant IDs. If both fail, check <code>checkoutUrl</code> and <code>variantId</code> in <code>lib/catalog.json</code> against Reap's merchant sheet. Test one SKU with <code>npx tsx scripts/quote.ts {sku}</code>. A 503 is on Reap's side: use the step 5 fallback line.</td>
-        </tr>
-        <tr>
-          <td><strong>2. Amounts off by 100×.</strong> The book shows S$1079.00 or S$0.11.</td>
-          <td>Reap sends decimal major units (<code>{ "amount": 10.79 }</code>); AgentCart uses integer cents everywhere else. Something read a Reap amount without converting it.</td>
-          <td>Every Reap amount must pass through <code>ReapMoneySchema</code> / <code>toCents</code> in <code>lib/reap/money.ts</code>. <code>npm test</code> covers it ("converts Reap's decimal amounts to integer cents").</td>
-        </tr>
-        <tr>
-          <td><strong>3. returnUrl rejected.</strong> "Checkout returnUrl must be HTTPS (got http://…)", or Add card fails with "Enrollment returnUrl must be HTTPS".</td>
-          <td><code>APP_BASE_URL</code> is <code>http://</code>, or the app is running on plain <code>npm run dev</code>. Reap only accepts HTTPS return URLs; the adapter refuses before calling Reap.</td>
-          <td>Run <code>npm run dev:https</code> with <code>APP_BASE_URL=https://localhost:3443</code> and restart after editing <code>.env.local</code>. No ngrok needed: Reap accepts <code>https://localhost</code>.</td>
-        </tr>
-        <tr>
-          <td><strong>4. Enrollment stuck non-<code>ACTIVE</code>.</strong> "You started adding a card. Finish on Reap…", or <code>npm run enroll</code> prints "Enrollment ended as …" or times out after 10 minutes.</td>
-          <td>Card entry not finished on Reap's page, OTP not entered, or the enrollment failed or expired. Reap rejects emails on reserved test domains such as <code>.test</code>.</td>
-          <td>Finish on Reap's page (OTP <code>456789</code>), then "Check again" (re-reads every pending enrollment from Reap, which can take a few minutes to mark one <code>ACTIVE</code>). Each Reap link works once: if it says the session was used, click "Start again". Keep <code>DEMO_EMAIL=demo@example.com</code>.</td>
-        </tr>
-        <tr>
-          <td><strong>5. Model not calling tools.</strong> Prose answers with no catalog or price cards, or a chat error.</td>
-          <td><code>OPENAI_API_KEY</code> empty (<code>/api/agent</code> answers 503 "The LLM provider is not configured. Set OPENAI_* in .env.local."), a model without tool calling, or a GPT-6 model without <code>reasoning_effort: "none"</code>.</td>
-          <td>Set the key and restart. <code>lib/agent/model.ts</code> adds <code>reasoning_effort: "none"</code> when the model name contains <code>gpt-6</code>. For another provider change <code>OPENAI_BASE_URL</code> and <code>OPENAI_MODEL</code> together, to a model with tool calling.</td>
-        </tr>
-        <tr>
-          <td><strong>6. <code>better-sqlite3</code> build error.</strong> The app or a script fails on first database access.</td>
-          <td>npm skipped install scripts (<code>npm config get ignore-scripts</code> prints <code>true</code>), so the native module was never built.</td>
-          <td><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code>, then check with <code>node -e "new (require('better-sqlite3'))(':memory:')"</code>.</td>
-        </tr>
-        <tr>
-          <td><strong>7. Port busy.</strong> The dev server will not start, or starts somewhere unexpected.</td>
-          <td>An old dev server still holds 3443 (<code>npm run dev:https</code>) or 3000 (<code>npm run dev</code>).</td>
-          <td><code>lsof -iTCP:3443 -sTCP:LISTEN</code> (or <code>:3000</code>) and stop that process. If another server owns <code>localhost:3000</code>, plain <code>npm run dev</code> also works at http://127.0.0.1:3000. If you change the HTTPS port, <code>APP_BASE_URL</code> must match, or Reap sends people to the wrong place.</td>
-        </tr>
-        <tr>
-          <td><strong>8. Chain badge red with no tampering.</strong> "A record was changed" before step 9.</td>
-          <td>The Tamper button was pressed in an earlier take (the edited row stays until reset), or <code>data/safr.db</code> was edited or had rows deleted by hand (deleting a row breaks the chain at the next one). Recording execution status never breaks it; that sits outside the hash.</td>
-          <td><code>npm run reset-demo</code>. To see where it breaks: <code>GET /api/audit</code> returns <code>chain: { ok, length, brokenAtSeq }</code>.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <details class="disclosure"><summary><h3>Quote rejected</h3></summary><div class="detail-body"><p class="small muted"><strong>1. Quote rejected.</strong> The agent says Reap could not price the item.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>Reap refused the merchant permalink (<code>CHECKOUT_URL_INVALID</code>), or the merchant is unavailable (brewlander.com returns 503 <code>AGENTIC_SERVICE_UNAVAILABLE</code>). The log shows <code>[agentcart] getQuote failed for {sku}: …</code>.</p></div><div><h4>What to do</h4><p>On <code>CHECKOUT_URL_INVALID</code> the adapter already retries with <code>items: [{ variantId }]</code>; that path expects Reap's own discovery variant IDs. If both fail, check <code>checkoutUrl</code> and <code>variantId</code> in <code>lib/catalog.json</code> against Reap's merchant sheet. Test one SKU with <code>npx tsx scripts/quote.ts {sku}</code>. A 503 is on Reap's side: use the step 5 fallback line.</p></div></div></div></details>
+<details class="disclosure"><summary><h3>Amounts off by 100×</h3></summary><div class="detail-body"><p class="small muted"><strong>2. Amounts off by 100×.</strong> The book shows S$1079.00 or S$0.11.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>Reap sends decimal major units (<code>{ "amount": 10.79 }</code>); AgentCart uses integer cents everywhere else. Something read a Reap amount without converting it.</p></div><div><h4>What to do</h4><p>Every Reap amount must pass through <code>ReapMoneySchema</code> / <code>toCents</code> in <code>lib/reap/money.ts</code>. <code>npm test</code> covers it ("converts Reap's decimal amounts to integer cents").</p></div></div></div></details>
+<details class="disclosure"><summary><h3>returnUrl rejected</h3></summary><div class="detail-body"><p class="small muted"><strong>3. returnUrl rejected.</strong> "Checkout returnUrl must be HTTPS (got http://…)", or Add card fails with "Enrollment returnUrl must be HTTPS".</p><div class="detail-grid"><div><h4>Why it happens</h4><p><code>APP_BASE_URL</code> is <code>http://</code>, or the app is running on plain <code>npm run dev</code>. Reap only accepts HTTPS return URLs; the adapter refuses before calling Reap.</p></div><div><h4>What to do</h4><p>Run <code>npm run dev:https</code> with <code>APP_BASE_URL=https://localhost:3443</code> and restart after editing <code>.env.local</code>. No ngrok needed: Reap accepts <code>https://localhost</code>.</p></div></div></div></details>
+<details class="disclosure"><summary><h3>Enrollment stuck non-<code>ACTIVE</code></h3></summary><div class="detail-body"><p class="small muted"><strong>4. Enrollment stuck non-<code>ACTIVE</code>.</strong> "You started adding a card. Finish on Reap…", or <code>npm run enroll</code> prints "Enrollment ended as …" or times out after 10 minutes.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>Card entry not finished on Reap's page, OTP not entered, or the enrollment failed or expired. Reap rejects emails on reserved test domains such as <code>.test</code>.</p></div><div><h4>What to do</h4><p>Finish on Reap's page (OTP <code>456789</code>), then "Check again" (re-reads every pending enrollment from Reap, which can take a few minutes to mark one <code>ACTIVE</code>). Each Reap link works once: if it says the session was used, click "Start again". Keep <code>DEMO_EMAIL=demo@example.com</code>.</p></div></div></div></details>
+<details class="disclosure"><summary><h3>Model not calling tools</h3></summary><div class="detail-body"><p class="small muted"><strong>5. Model not calling tools.</strong> Prose answers with no catalog or price cards, or a chat error.</p><div class="detail-grid"><div><h4>Why it happens</h4><p><code>OPENAI_API_KEY</code> empty (<code>/api/agent</code> answers 503 "The LLM provider is not configured. Set OPENAI_* in .env.local."), a model without tool calling, or a GPT-6 model without <code>reasoning_effort: "none"</code>.</p></div><div><h4>What to do</h4><p>Set the key and restart. <code>lib/agent/model.ts</code> adds <code>reasoning_effort: "none"</code> when the model name contains <code>gpt-6</code>. For another provider change <code>OPENAI_BASE_URL</code> and <code>OPENAI_MODEL</code> together, to a model with tool calling.</p></div></div></div></details>
+<details class="disclosure"><summary><h3><code>better-sqlite3</code> build error</h3></summary><div class="detail-body"><p class="small muted"><strong>6. <code>better-sqlite3</code> build error.</strong> The app or a script fails on first database access.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>npm skipped install scripts (<code>npm config get ignore-scripts</code> prints <code>true</code>), so the native module was never built.</p></div><div><h4>What to do</h4><p><code>cd node_modules/better-sqlite3 &amp;&amp; npx prebuild-install &amp;&amp; cd ../..</code>, then check with <code>node -e "new (require('better-sqlite3'))(':memory:')"</code>.</p></div></div></div></details>
+<details class="disclosure"><summary><h3>Port busy</h3></summary><div class="detail-body"><p class="small muted"><strong>7. Port busy.</strong> The dev server will not start, or starts somewhere unexpected.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>An old dev server still holds 3443 (<code>npm run dev:https</code>) or 3000 (<code>npm run dev</code>).</p></div><div><h4>What to do</h4><p><code>lsof -iTCP:3443 -sTCP:LISTEN</code> (or <code>:3000</code>) and stop that process. If another server owns <code>localhost:3000</code>, plain <code>npm run dev</code> also works at http://127.0.0.1:3000. If you change the HTTPS port, <code>APP_BASE_URL</code> must match, or Reap sends people to the wrong place.</p></div></div></div></details>
+<details class="disclosure"><summary><h3>Chain badge red with no tampering</h3></summary><div class="detail-body"><p class="small muted"><strong>8. Chain badge red with no tampering.</strong> "A record was changed" before step 9.</p><div class="detail-grid"><div><h4>Why it happens</h4><p>The Tamper button was pressed in an earlier take (the edited row stays until reset), or <code>data/safr.db</code> was edited or had rows deleted by hand (deleting a row breaks the chain at the next one). Recording execution status never breaks it; that sits outside the hash.</p></div><div><h4>What to do</h4><p><code>npm run reset-demo</code>. To see where it breaks: <code>GET /api/audit</code> returns <code>chain: { ok, length, brokenAtSeq }</code>.</p></div></div></div></details>
   <p><strong>Also check:</strong> <code>npm run dev:https</code> will not start because <code>certificates/localhost.pem</code> or <code>localhost-key.pem</code> is missing or expired (create it with the command in <a href="#setup">setup step 5</a>); every purchase says "The spending mandate is not valid right now" (dates, see <a href="#reset">section 9</a>); every purchase says "could not be verified as coming from this agent" (<code>AGENT_PRIVATE_KEY</code> empty, or the public key not registered after a wipe: run <code>npm run keygen</code> and restart); an Allowed decision ends in "no card has been added yet" (add the card).</p>
 </section>
 
 <!-- ============================== 11. Recording ============================== -->
 <section id="recording" class="runbook">
-  <h2><span class="num">11</span>Recording checklist</h2>
+  <div class="section-kicker"><span class="num">11</span><span>The demo</span></div>
+<h2>Ready for the camera</h2>
   <h3>Browser and layout</h3>
   <ul>
     <li>The chat and panel sit side by side only when the page is at least 1100 CSS pixels wide; narrower, they stack. At 125% zoom that is a window about 1375 pixels wide. Zoom 110% to 125% for legibility.</li>
@@ -1148,7 +1266,8 @@ npm run dev:https</code></pre>
 
 <!-- ============================== 12. References ============================== -->
 <section id="references" class="runbook">
-  <h2><span class="num">12</span>References</h2>
+  <div class="section-kicker"><span class="num">12</span><span>Resources</span></div>
+<h2>Sources &amp; further reading</h2>
   <ul>
     <li>Monetary Authority of Singapore. Safeguards for Agentic Finance at Runtime (SAFR). White paper, version 1.0, July 2026.</li>
     <li>Reap. Agentic Payments documentation, docs.reap.global/agentic-payments. API version 2025-02-14.</li>
@@ -1159,9 +1278,384 @@ npm run dev:https</code></pre>
 
 <footer class="page-foot">
   <p>Written against commit <code>5fe4e50</code> (branch <code>lane-a-reap-adapter</code>), 9 Oct 2026. When this page and the code disagree, the code wins.</p>
-</footer>
+<a href="#pitch">Back to the top ↑</a></footer>
 
 </main>
 </div>
+</div>
+
+<dialog id="search-dialog" class="search-dialog" aria-label="Search this guide">
+  <div class="search-field"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg><label class="sr-only" for="guide-search">Search this guide</label><input id="guide-search" type="search" placeholder="Search setup, rules, demo steps…" autocomplete="off" autofocus><button class="dialog-close" type="button" data-close-dialog>Esc</button></div>
+  <div id="search-results" class="search-results"></div><p id="search-count" class="search-hint" role="status">Jump to a section or search for a topic.</p>
+</dialog>
+<dialog id="contents-dialog" class="contents-dialog" aria-labelledby="contents-title">
+  <div class="dialog-header"><h2 id="contents-title">In this guide</h2><button class="icon-button" type="button" aria-label="Close contents" data-close-dialog><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+  <nav class="toc" aria-label="Mobile contents"><div class="toc-group"><p class="toc-title">The idea</p><ol><li><a href="#pitch" aria-current="location"><span class="nav-num">01</span>Overview</a></li><li><a href="#problem"><span class="nav-num">02</span>The problem</a></li><li><a href="#benefits"><span class="nav-num">03</span>Who benefits</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">The system</p><ol><li><a href="#safr"><span class="nav-num">04</span>The SAFR framework</a></li><li><a href="#architecture"><span class="nav-num">05</span>Architecture</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">The demo</p><ol><li><a href="#setup"><span class="nav-num">06</span>Setup</a></li><li><a href="#identities"><span class="nav-num">07</span>Accounts &amp; identities</a></li><li><a href="#demo-flow"><span class="nav-num">08</span>Demo walkthrough</a></li><li><a href="#reset"><span class="nav-num">09</span>Reset between takes</a></li><li><a href="#troubleshooting"><span class="nav-num">10</span>Troubleshooting</a></li><li><a href="#recording"><span class="nav-num">11</span>Recording checklist</a></li></ol></div>
+<div class="toc-group"><p class="toc-title">Resources</p><ol><li><a href="#references"><span class="nav-num">12</span>References</a></li></ol></div></nav>
+</dialog>
+<div class="toast" id="guide-toast" role="status" aria-live="polite" hidden></div>
+
+
+<script>
+(() => {
+  "use strict";
+  const qs = (selector, root = document) => root.querySelector(selector);
+  const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const icon = name => '<svg class="icon" aria-hidden="true"><use href="#icon-' + name + '"></use></svg>';
+  const main = qs("main");
+  const searchDialog = qs("#search-dialog");
+  const contentsDialog = qs("#contents-dialog");
+  const toast = qs("#guide-toast");
+  let toastTimer;
+  function announce(message) {
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.hidden = false;
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 2800);
+  }
+
+  // Named sections work as ordinary anchors without JavaScript.
+  qsa("main h3").forEach((heading, index) => {
+    if (!heading.id) heading.id = (heading.closest("section")?.id || "pitch") + "-topic-" + index;
+  });
+  const sections = qsa("main > header[id], main > section[id]");
+  const navLinks = qsa(".toc a");
+  const navLabels = new Map(qsa(".sidebar .toc a").map(link => [link.hash.slice(1), link.textContent.replace(/^\s*\d+\s*/, "").trim()]));
+  function revealTarget(id, moveFocus = false) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    let parent = target;
+    while (parent && parent !== main) {
+      if (parent.tagName === "DETAILS") parent.open = true;
+      parent = parent.parentElement;
+    }
+    target.scrollIntoView({ block: "start", behavior: "instant" });
+    if (moveFocus) {
+      if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
+    }
+  }
+  function currentHash() {
+    try { return decodeURIComponent(location.hash.slice(1)); } catch { return ""; }
+  }
+  document.addEventListener("click", event => {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const id = link.getAttribute("href").slice(1);
+    if (!document.getElementById(id)) return;
+    event.preventDefault();
+    if (searchDialog.open) searchDialog.close();
+    if (contentsDialog.open) contentsDialog.close();
+    if (location.hash !== "#" + id) history.pushState(null, "", "#" + id);
+    revealTarget(id, true);
+  });
+  window.addEventListener("popstate", () => revealTarget(currentHash() || "pitch"));
+  window.addEventListener("hashchange", () => revealTarget(currentHash()));
+  let scrollScheduled = false;
+  function syncLocation() {
+    scrollScheduled = false;
+    const active = sections.reduce((previous, section) => section.getBoundingClientRect().top <= 160 ? section : previous, sections[0]);
+    navLinks.forEach(link => {
+      if (link.hash === "#" + active.id) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+    qs("#current-section").textContent = navLabels.get(active.id) || "Overview";
+    const available = document.documentElement.scrollHeight - window.innerHeight;
+    qs("#reading-progress").style.width = (available > 0 ? Math.min(100, Math.max(0, window.scrollY / available * 100)) : 100) + "%";
+  }
+  window.addEventListener("scroll", () => {
+    if (!scrollScheduled) { scrollScheduled = true; requestAnimationFrame(syncLocation); }
+  }, { passive: true });
+  window.addEventListener("resize", syncLocation);
+
+  // Copy only on an explicit click. The guide never executes a command.
+  async function copyText(text, button) {
+    const original = button.innerHTML;
+    try {
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const field = document.createElement("textarea");
+        field.value = text;
+        field.setAttribute("aria-label", "Text to copy");
+        field.style.cssText = "position:fixed;left:-9999px;top:0";
+        document.body.append(field);
+        try {
+          field.select();
+          if (!document.execCommand("copy")) throw new Error("Copy unavailable");
+        } finally { field.remove(); button.focus({ preventScroll: true }); }
+      }
+      button.innerHTML = icon("check") + "Copied";
+      announce("Copied to clipboard");
+    } catch {
+      announce("Copy is unavailable. Select the text and copy it manually.");
+    }
+    setTimeout(() => { if (button.isConnected) button.innerHTML = original; }, 2200);
+  }
+  qsa("pre").forEach(pre => {
+    const code = qs("code", pre);
+    if (!code) return;
+    const block = document.createElement("div");
+    block.className = "code-block";
+    const toolbar = document.createElement("div");
+    toolbar.className = "code-toolbar";
+    const label = document.createElement("span");
+    const value = code.textContent.trim();
+    label.textContent = value.startsWith("export type") ? "TypeScript" : value.startsWith("Demo reset:") ? "Expected output" : "Terminal";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy-button";
+    button.innerHTML = icon("copy") + "Copy";
+    button.setAttribute("aria-label", "Copy " + label.textContent.toLowerCase());
+    button.addEventListener("click", () => copyText(value, button));
+    toolbar.append(label, button);
+    pre.before(block);
+    block.append(toolbar, pre);
+  });
+  qsa(".table-wrap").forEach((wrap, index) => {
+    wrap.tabIndex = 0;
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("aria-label", (wrap.closest("section")?.querySelector("h2")?.textContent || "Reference") + " table " + (index + 1) + ", scroll horizontally if needed");
+  });
+  qs(".diagram-wrap").tabIndex = 0;
+  qs(".diagram-wrap").setAttribute("role", "region");
+  qs(".diagram-wrap").setAttribute("aria-label", "System architecture diagram, scroll horizontally on a small screen");
+
+  // Build the search index before adding controls or the guided script.
+  const entries = [];
+  sections.forEach(section => {
+    const title = section.id === "pitch" ? "Overview" : qs("h2", section).textContent;
+    entries.push({ id: section.id, title, section: navLabels.get(section.id), body: section.textContent.replace(/\s+/g, " ").trim(), top: true });
+    qsa("h3", section).forEach(heading => {
+      const detail = heading.closest(".disclosure");
+      let body = detail?.textContent || heading.textContent;
+      if (!detail) {
+        let next = heading.nextElementSibling;
+        while (next && !["H2", "H3"].includes(next.tagName)) {
+          body += " " + next.textContent;
+          next = next.nextElementSibling;
+        }
+      }
+      entries.push({ id: heading.id, title: heading.textContent, section: navLabels.get(section.id), body: body.replace(/\s+/g, " ").trim(), top: false });
+    });
+  });
+  function renderSearch() {
+    const query = qs("#guide-search").value.trim().toLowerCase();
+    const terms = query.split(/\s+/).filter(Boolean);
+    const results = query ? entries.map(entry => {
+      const title = entry.title.toLowerCase();
+      const all = (entry.id + " " + entry.section + " " + title + " " + entry.body).toLowerCase();
+      const score = terms.every(term => all.includes(term)) ? (title.includes(query) ? 100 : 0) + (entry.top ? 0 : 5) + terms.filter(term => title.includes(term)).length * 10 + 1 : 0;
+      return { ...entry, score };
+    }).filter(entry => entry.score > 0).sort((a, b) => b.score - a.score).slice(0, 12) : entries.filter(entry => entry.top);
+    const list = qs("#search-results");
+    list.replaceChildren();
+    if (!results.length) {
+      const empty = document.createElement("p");
+      empty.className = "search-empty";
+      empty.textContent = "No matches. Try a shorter phrase, like “approval” or “card”.";
+      list.append(empty);
+    }
+    results.forEach(entry => {
+      const link = document.createElement("a");
+      link.className = "search-result";
+      link.href = "#" + entry.id;
+      const heading = document.createElement("strong");
+      heading.textContent = entry.title;
+      const snippet = document.createElement("span");
+      const match = query ? entry.body.toLowerCase().indexOf(terms[0]) : 0;
+      const start = Math.max(0, match - 35);
+      snippet.textContent = entry.section + " · " + (start ? "…" : "") + entry.body.slice(start, start + 125) + (entry.body.length > start + 125 ? "…" : "");
+      link.append(heading, snippet);
+      list.append(link);
+    });
+    qs("#search-count").textContent = query ? results.length + (results.length === 1 ? " result" : " results") + ". Use Tab to choose a result." : "Jump to a section or search for a topic. Esc to close.";
+  }
+  function openSearch() {
+    if (contentsDialog.open) contentsDialog.close();
+    if (searchDialog.open) return;
+    renderSearch();
+    searchDialog.showModal();
+    qs("#guide-search").focus();
+  }
+  qsa("[data-open-search]").forEach(button => {
+    button.hidden = false;
+    button.addEventListener("click", openSearch);
+  });
+  qs("[data-open-contents]").hidden = false;
+  qs("[data-open-contents]").addEventListener("click", () => contentsDialog.showModal());
+  qsa("[data-close-dialog]").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
+  [searchDialog, contentsDialog].forEach(dialog => {
+    dialog.addEventListener("click", event => {
+      if (event.target !== dialog) return;
+      const bounds = dialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    });
+  });
+  qs("#guide-search").addEventListener("input", renderSearch);
+  qs("#guide-search").addEventListener("keydown", event => {
+    if (event.key === "ArrowDown") { event.preventDefault(); qs(".search-result")?.focus(); }
+  });
+  document.addEventListener("keydown", event => {
+    const editing = event.target.matches("input, textarea, select, [contenteditable]");
+    if (((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") || (event.key === "/" && !editing && !searchDialog.open && !contentsDialog.open)) {
+      event.preventDefault();
+      openSearch();
+    }
+  });
+
+  // Checklist ticks are stored only in this browser, separate from demo app data.
+  const storageKey = "agentcart-demo-guide:checks:v1";
+  let savedChecks = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    if (saved && typeof saved === "object" && !Array.isArray(saved)) savedChecks = saved;
+  } catch { /* The checklist still works when local storage is unavailable. */ }
+  function saveChecks() {
+    try { localStorage.setItem(storageKey, JSON.stringify(savedChecks)); } catch { /* Keep working in memory. */ }
+  }
+  qsa("ul.check").forEach((list, listIndex) => {
+    const items = [...list.children];
+    const bar = document.createElement("div");
+    bar.className = "checklist-bar";
+    const count = document.createElement("output");
+    count.setAttribute("aria-live", "polite");
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.textContent = "Clear ticks";
+    reset.setAttribute("aria-label", "Clear " + (list.closest("section").id === "setup" ? "setup" : "recording") + " checklist ticks");
+    bar.append(count, reset);
+    list.before(bar);
+    function updateCount() {
+      count.textContent = qsa("input:checked", list).length + " of " + items.length + " checked";
+    }
+    items.forEach((item, itemIndex) => {
+      const key = listIndex + ":" + itemIndex;
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = savedChecks[key] === true;
+      const text = document.createElement("span");
+      while (item.firstChild) text.append(item.firstChild);
+      label.append(checkbox, text);
+      item.append(label);
+      checkbox.addEventListener("change", () => {
+        savedChecks[key] = checkbox.checked;
+        saveChecks();
+        updateCount();
+      });
+    });
+    reset.addEventListener("click", () => {
+      qsa("input", list).forEach((input, index) => {
+        input.checked = false;
+        delete savedChecks[listIndex + ":" + index];
+      });
+      saveChecks();
+      updateCount();
+    });
+    updateCount();
+  });
+
+  // The source table remains the single source of truth and the print fallback.
+  const demoSection = qs("#demo-flow");
+  const source = qs(".flow-source", demoSection);
+  const rows = qsa("tbody tr", qs("table.flow", source)).map(row => [...row.cells].map(cell => cell.innerHTML));
+  const stepMeta = [
+    { title: "Set the spending limits", short: "Set the limits", badge: "Setup", tone: "b-obs" },
+    { title: "A routine purchase", short: "Buy the book", badge: "Allowed", tone: "b-auto", prompt: "Get a copy of True Singapore Ghost Stories 12 for the office" },
+    { title: "Ask for human approval", short: "Ask for approval", badge: "Needs approval", tone: "b-esc", prompt: "Order the Wabisabi luggage tag" },
+    { title: "Hold the budget line", short: "Over the budget", badge: "Not allowed", tone: "b-deny", prompt: "Buy the Geometry 12 custom table" },
+    { title: "Check the currency", short: "Wrong currency", badge: "Not allowed", tone: "b-deny", prompt: "Get the modular laptop stand" },
+    { title: "Keep purchases in scope", short: "Outside the scope", badge: "Quote unavailable", tone: "b-esc", prompt: "Grab a 6-pack of SG LAHger for Friday" },
+    { title: "Spot a repeat purchase", short: "Repeat purchase", badge: "Already checked", tone: "b-obs", prompt: "Buy the True Singapore Ghost Stories Book 12 again" },
+    { title: "Stop all spending", short: "Kill switch", badge: "Not allowed", tone: "b-deny" },
+    { title: "Pause the assistant", short: "Pause the assistant", badge: "Not allowed", tone: "b-deny" },
+    { title: "Show the record was changed", short: "Check the audit log", badge: "Tamper detected", tone: "b-deny" }
+  ];
+  if (rows.length === stepMeta.length && rows.every(row => row.length === 7)) {
+    const player = document.createElement("div");
+    player.className = "demo-player";
+    player.innerHTML = '<div class="player-toolbar"><label for="demo-cut">Running order <select id="demo-cut"><option value="full">Full run · 4 min</option><option value="short">Short cut · 90 sec</option></select></label><div class="view-toggle" role="group" aria-label="Script view"><button type="button" data-view="guided" aria-pressed="true">Step by step</button><button type="button" data-view="full" aria-pressed="false">Full script</button></div></div><div class="player-body"><nav class="step-nav" aria-label="Demo steps"></nav><article class="stage" aria-labelledby="stage-title"></article></div><p class="player-full-note" hidden>The full reference below includes all ten steps, with the complete narration and expected results.</p><div class="player-footer"><span class="step-progress" role="status"></span><button class="button" type="button" data-prev>' + icon("left") + 'Previous</button><button class="button primary" type="button" data-next>Next step' + icon("arrow") + '</button></div>';
+    source.before(player);
+    let available = stepMeta.map((_, index) => index);
+    let selected = 0;
+    function renderStage(focusHeading = false) {
+      const data = stepMeta[selected];
+      const cells = rows[selected];
+      const position = available.indexOf(selected);
+      qs(".stage", player).innerHTML = '<div class="stage-kicker"><span>STEP ' + String(selected).padStart(2, "0") + '</span><span class="badge ' + data.tone + '">' + data.badge + '</span></div><h3 id="stage-title" tabindex="-1">' + data.title + '</h3><div class="stage-instruction"><p class="detail-label">You do</p><p>' + cells[1] + '</p>' + (data.prompt ? '<button type="button" class="button prompt-copy">' + icon("copy") + 'Copy prompt</button>' : "") + '</div><blockquote><div class="detail-label">You say</div><p>' + cells[5] + '</p></blockquote><details class="disclosure"><summary>What to look for</summary><div class="detail-body"><h4>The assistant</h4><p>' + cells[2] + '</p><h4>The SAFR panel</h4><p>' + cells[3] + '</p><h4>On Reap’s side</h4><p>' + cells[4] + '</p><h4>The scenario</h4><p>' + cells[6] + '</p></div></details>';
+      qsa(".step-nav button", player).forEach(button => {
+        if (Number(button.dataset.step) === selected) button.setAttribute("aria-current", "step");
+        else button.removeAttribute("aria-current");
+      });
+      qs(".step-progress", player).textContent = (position + 1) + " of " + available.length + " steps";
+      qs("[data-prev]", player).disabled = position === 0;
+      qs("[data-next]", player).disabled = position === available.length - 1;
+      qs(".prompt-copy", player)?.addEventListener("click", event => copyText(data.prompt, event.currentTarget));
+      if (focusHeading) {
+        qs("#stage-title").focus({ preventScroll: true });
+        if (window.matchMedia("(max-width: 680px)").matches) qs(".stage", player).scrollIntoView({ block: "start", behavior: "instant" });
+      }
+    }
+    function renderSteps() {
+      const nav = qs(".step-nav", player);
+      nav.replaceChildren();
+      available.forEach(index => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.step = index;
+        button.setAttribute("aria-label", "Step " + index + ": " + stepMeta[index].title);
+        button.innerHTML = '<span>' + String(index).padStart(2, "0") + '</span><span class="step-name">' + stepMeta[index].short + '</span>';
+        button.addEventListener("click", () => { selected = index; renderStage(); });
+        nav.append(button);
+      });
+      renderStage();
+    }
+    qs("#demo-cut").addEventListener("change", event => {
+      available = event.target.value === "short" ? [0, 1, 2, 3, 4, 5, 8, 9] : stepMeta.map((_, index) => index);
+      if (!available.includes(selected)) selected = available[0];
+      renderSteps();
+    });
+    qs("[data-prev]", player).addEventListener("click", () => {
+      selected = available[Math.max(0, available.indexOf(selected) - 1)];
+      renderStage(true);
+    });
+    qs("[data-next]", player).addEventListener("click", () => {
+      selected = available[Math.min(available.length - 1, available.indexOf(selected) + 1)];
+      renderStage(true);
+    });
+    qsa("[data-view]", player).forEach(button => button.addEventListener("click", () => {
+      const full = button.dataset.view === "full";
+      demoSection.classList.toggle("show-full", full);
+      qs(".player-body", player).hidden = full;
+      qs(".player-footer", player).hidden = full;
+      qs(".player-full-note", player).hidden = !full;
+      qs("#demo-cut").disabled = full;
+      qsa("[data-view]", player).forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+    }));
+    renderSteps();
+    demoSection.classList.add("has-player");
+  }
+
+  // Print every detail, then restore the reading state.
+  let printDetails = null;
+  window.addEventListener("beforeprint", () => {
+    if (printDetails) return;
+    printDetails = qsa("main details").map(detail => ({ detail, open: detail.open }));
+    printDetails.forEach(({ detail }) => { detail.open = true; });
+  });
+  window.addEventListener("afterprint", () => {
+    printDetails?.forEach(({ detail, open }) => { detail.open = open; });
+    printDetails = null;
+  });
+  qs("#print-guide").hidden = false;
+  qs("#print-guide").addEventListener("click", () => window.print());
+  if (currentHash()) requestAnimationFrame(() => revealTarget(currentHash()));
+  syncLocation();
+})();
+</script>
 </body>
 </html>
