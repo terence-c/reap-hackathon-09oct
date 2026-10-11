@@ -323,6 +323,12 @@ export function GovernancePanel({
             allows complete automatically. Set REAP_MODE=live with a valid Reap key for real checkouts.
           </p>
         )}
+        {state?.reap.mode === "auto" && state.reap.lastFallback && (
+          <p className="mt-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[11px] text-blue">
+            Reap&apos;s sandbox could not be reached, so prices recorded from it are being used.
+            These purchases are simulated and labeled.
+          </p>
+        )}
         {stateError && (
           <div
             role="alert"
@@ -341,15 +347,97 @@ export function GovernancePanel({
         )}
       </header>
 
-      <Section index="01" title="Payment card" tint="bg-butter/60">
+      <Section index="01" title="SAFR checks" tint="bg-mint/40">
+        <PolicyChecklist entry={latest} lifecycle={latest ? state?.lifecycle[latest.seq] : undefined} />
+      </Section>
+
+      <Section index="02" title="Permission" tint="bg-peach/60">
+        {state && state.approvals.length > 0 && (
+          <div className="mb-3 space-y-2">
+            {state.approvals.map((approval) => (
+              <ApprovalCard
+                key={approval.envelopeHash}
+                itemName={plainText(bySku.get(approval.sku)?.name ?? approval.sku)}
+                merchantDomain={approval.merchantDomain}
+                amount={approval.amount}
+                envelopeHash={approval.envelopeHash}
+                expiresAt={approval.expiresAt}
+                sending={resolving.has(approval.envelopeHash)}
+                error={errorFor(approval.envelopeHash)}
+                onResolve={(approved) => void resolveApproval(approval.envelopeHash, approved)}
+              />
+            ))}
+          </div>
+        )}
+
+        {shownAnswers.length > 0 && (
+          <ul className="mb-3 space-y-2">
+            {shownAnswers.map((answer) => (
+              <li
+                key={answer.envelopeHash}
+                className="rounded-xl border border-line bg-white px-3 py-2.5 text-[13px]"
+              >
+                <p className="ac-label text-muted">
+                  {answer.error
+                    ? "Your answer was not saved"
+                    : `You ${answer.approved ? "approved" : "declined"} a request`}
+                </p>
+                {answer.error ? (
+                  <p role="alert" className="mt-1 text-red">
+                    {plainText(answer.error)}
+                  </p>
+                ) : answer.result ? (
+                  <div className="mt-1.5 space-y-1.5">
+                    <DecisionBadge decision={answer.result.decision} />
+                    <p className="text-ink">{plainText(answer.result.message)}</p>
+                    {answer.result.checkoutId && (
+                      <OrderStatus checkoutId={answer.result.checkoutId} approvalUrl={answer.result.approvalUrl} />
+                    )}
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {!state ? (
           <Loading failed={Boolean(stateError)} />
+        ) : !latest ? (
+          <div>
+            <p className="text-[15px] font-medium text-ink">No requests yet.</p>
+            <p className="mt-1 text-[12px] text-muted">
+              Ask for an item to see whether the purchase is allowed.
+            </p>
+          </div>
         ) : (
-          <PaymentCard enrollment={state.enrollment} onMutate={onMutate} />
+          <div className="space-y-2.5">
+            <p className="ac-label text-muted">Latest decision</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <DecisionBadge decision={latest.disposition.decision} />
+              <RuleChips rules={latest.disposition.rulesFired} />
+            </div>
+            <p className="break-words text-[12px] text-muted">
+              {itemNames(latest)} · {formatMoney(latest.envelope.action.amount)} at{" "}
+              {latest.envelope.action.merchantDomain}
+            </p>
+            <p className="text-[13px] text-ink">{plainText(latest.disposition.reason)}</p>
+            <details>
+              <summary className="ac-focus-ring cursor-pointer rounded">
+                <span className="ac-label text-muted">Technical details</span>
+              </summary>
+              <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-line bg-paper p-3 font-mono text-[10.5px] text-ink">
+                {JSON.stringify(
+                  { decision: latest.disposition.decision, rules: latest.disposition.rulesFired },
+                  null,
+                  2,
+                )}
+              </pre>
+            </details>
+          </div>
         )}
       </Section>
 
-      <Section index="02" title="Spending limits" tint="bg-lavender/50">
+      <Section index="03" title="Spending limits" tint="bg-lavender/50">
         {!state ? (
           <Loading failed={Boolean(stateError)} />
         ) : (
@@ -505,7 +593,7 @@ export function GovernancePanel({
         )}
       </Section>
 
-      <Section index="03" title="Purchase details" tint="bg-mint/50">
+      <Section index="04" title="Purchase details" tint="bg-mint/50">
         {!state ? (
           <Loading failed={Boolean(stateError)} />
         ) : !latest ? (
@@ -548,94 +636,13 @@ export function GovernancePanel({
         )}
       </Section>
 
-      <Section index="04" title="Permission" tint="bg-peach/60">
-        {state && state.approvals.length > 0 && (
-          <div className="mb-3 space-y-2">
-            {state.approvals.map((approval) => (
-              <ApprovalCard
-                key={approval.envelopeHash}
-                itemName={plainText(bySku.get(approval.sku)?.name ?? approval.sku)}
-                merchantDomain={approval.merchantDomain}
-                amount={approval.amount}
-                envelopeHash={approval.envelopeHash}
-                expiresAt={approval.expiresAt}
-                sending={resolving.has(approval.envelopeHash)}
-                error={errorFor(approval.envelopeHash)}
-                onResolve={(approved) => void resolveApproval(approval.envelopeHash, approved)}
-              />
-            ))}
-          </div>
-        )}
 
-        {shownAnswers.length > 0 && (
-          <ul className="mb-3 space-y-2">
-            {shownAnswers.map((answer) => (
-              <li
-                key={answer.envelopeHash}
-                className="rounded-xl border border-line bg-white px-3 py-2.5 text-[13px]"
-              >
-                <p className="ac-label text-muted">
-                  {answer.error
-                    ? "Your answer was not saved"
-                    : `You ${answer.approved ? "approved" : "declined"} a request`}
-                </p>
-                {answer.error ? (
-                  <p role="alert" className="mt-1 text-red">
-                    {plainText(answer.error)}
-                  </p>
-                ) : answer.result ? (
-                  <div className="mt-1.5 space-y-1.5">
-                    <DecisionBadge decision={answer.result.decision} />
-                    <p className="text-ink">{plainText(answer.result.message)}</p>
-                    {answer.result.checkoutId && (
-                      <OrderStatus checkoutId={answer.result.checkoutId} approvalUrl={answer.result.approvalUrl} />
-                    )}
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-
+      <Section index="05" title="Payment card" tint="bg-butter/60">
         {!state ? (
           <Loading failed={Boolean(stateError)} />
-        ) : !latest ? (
-          <div>
-            <p className="text-[15px] font-medium text-ink">No requests yet.</p>
-            <p className="mt-1 text-[12px] text-muted">
-              Ask for an item to see whether the purchase is allowed.
-            </p>
-          </div>
         ) : (
-          <div className="space-y-2.5">
-            <p className="ac-label text-muted">Latest decision</p>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <DecisionBadge decision={latest.disposition.decision} />
-              <RuleChips rules={latest.disposition.rulesFired} />
-            </div>
-            <p className="break-words text-[12px] text-muted">
-              {itemNames(latest)} · {formatMoney(latest.envelope.action.amount)} at{" "}
-              {latest.envelope.action.merchantDomain}
-            </p>
-            <p className="text-[13px] text-ink">{plainText(latest.disposition.reason)}</p>
-            <details>
-              <summary className="ac-focus-ring cursor-pointer rounded">
-                <span className="ac-label text-muted">Technical details</span>
-              </summary>
-              <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-line bg-paper p-3 font-mono text-[10.5px] text-ink">
-                {JSON.stringify(
-                  { decision: latest.disposition.decision, rules: latest.disposition.rulesFired },
-                  null,
-                  2,
-                )}
-              </pre>
-            </details>
-          </div>
+          <PaymentCard enrollment={state.enrollment} onMutate={onMutate} />
         )}
-      </Section>
-
-      <Section index="05" title="SAFR checks" tint="bg-mint/40">
-        <PolicyChecklist entry={latest} />
       </Section>
 
       <Section index="06" title="Activity" tint="bg-sky/50">

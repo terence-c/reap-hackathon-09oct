@@ -3,6 +3,7 @@
 
 import type { AuditEntry, Mandate } from "@/lib/types";
 import type { PendingApproval } from "@/lib/safr/gate";
+import type { PolicyCheck } from "@/lib/safr/policies";
 import type { ToolEvent } from "@/lib/safr/registry";
 import type { Enrollment } from "@/lib/reap/enrollments";
 
@@ -10,7 +11,10 @@ export type { Enrollment, PendingApproval, ToolEvent };
 
 export type AgentStateResponse = {
   mode: "live";
-  reapMode: "live" | "mock"; // mock = Reap offline mode: recorded sandbox prices, checkouts complete in-process
+  reapMode: "live" | "mock" | "auto"; // mock = offline; auto = live with recorded-price fallback
+  reap: { mode: "live" | "mock" | "auto"; lastFallback: { at: string; reason: string } | null };
+  // Lifecycle checks per audit seq (newest 30 entries), computed live on every read.
+  lifecycle: Record<number, PolicyCheck[]>;
   mandate: Mandate;
   remainingBudget: number;
   registry: {

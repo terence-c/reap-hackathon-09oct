@@ -222,6 +222,24 @@ export function createGate(deps: GateDeps): SafrGate {
           envelopeHash: envelope.hash,
         };
       }
+      // Confirm once straight away: a checkout Reap already reports COMPLETED settles the hold
+      // now (autonomous spend), and one that already failed releases it. An unreadable status is
+      // ignored — the order status route records the outcome when it is polled instead.
+      let confirmed: CheckoutStatus | null = null;
+      try {
+        confirmed = (await deps.reap.getCheckout(checkout.id)).status;
+      } catch {
+        confirmed = null;
+      }
+      if (confirmed) recordCheckoutOutcome(checkout.id, confirmed);
+      if (confirmed === "FAILED" || confirmed === "EXPIRED") {
+        return {
+          decision: disposition.decision,
+          message: `${disposition.reason} But Reap reported the checkout as ${confirmed.toLowerCase()}, so nothing was charged.`,
+          checkoutId: checkout.id,
+          envelopeHash: envelope.hash,
+        };
+      }
       const next = checkout.nextAction
         ? "Awaiting your approval on Reap's page."
         : "Checkout sent to Reap; waiting for it to confirm.";

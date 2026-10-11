@@ -1,7 +1,7 @@
 // The gate end to end on the mock Reap adapter: the eight demo-script steps in order, with
 // budget and velocity carrying over, then the approval edge cases.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as audit from "@/lib/safr/audit";
 import { committed, getReservation, loadMandate, saveMandate } from "@/lib/safr/controls";
 import { assertExecutable, checkoutIdForEnvelope, GateError, recordCheckoutOutcome } from "@/lib/safr/gate";
@@ -186,5 +186,43 @@ describe("gate", () => {
     expect(assertExecutable(book.envelopeHash, "another-quote")).toBe(false);
     const beer = await gate.proposeCheckout({ quoteId: (await quote("brewlander-6pack")).id, reason: "", sessionId: "s" });
     expect(assertExecutable(beer.envelopeHash, "anything")).toBe(false);
+  });
+});
+
+describe("checkout confirm right after creation", () => {
+  const BOOK = "popular-ghost-stories-12";
+
+  it("COMPLETED on the follow-up read settles the hold immediately", async () => {
+    const { gate, quote, reap } = setup();
+    vi.spyOn(reap, "getCheckout").mockResolvedValue({ id: "x", status: "COMPLETED", orderId: "ord_1" });
+    const book = await gate.proposeCheckout({ quoteId: (await quote(BOOK)).id, reason: "", sessionId: "s" });
+    expect(book.decision).toBe("AUTO_EXECUTE");
+    expect(reap.getCheckout).toHaveBeenCalledWith(book.checkoutId);
+    expect(getReservation(book.envelopeHash)?.status).toBe("SETTLED");
+    expect(committed("mandate-001")).toEqual({ reserved: 0, settled: 1579 });
+  });
+
+  it("PROCESSING keeps the hold RESERVED", async () => {
+    const { gate, quote, reap } = setup();
+    vi.spyOn(reap, "getCheckout").mockResolvedValue({ id: "x", status: "PROCESSING" });
+    const book = await gate.proposeCheckout({ quoteId: (await quote(BOOK)).id, reason: "", sessionId: "s" });
+    expect(getReservation(book.envelopeHash)?.status).toBe("RESERVED");
+  });
+
+  it("an unreadable status still returns the normal result and keeps the hold", async () => {
+    const { gate, quote, reap } = setup();
+    vi.spyOn(reap, "getCheckout").mockRejectedValue(new Error("Reap unreachable"));
+    const book = await gate.proposeCheckout({ quoteId: (await quote(BOOK)).id, reason: "", sessionId: "s" });
+    expect(book).toMatchObject({ decision: "AUTO_EXECUTE", checkoutId: expect.any(String), approvalUrl: expect.any(String) });
+    expect(getReservation(book.envelopeHash)?.status).toBe("RESERVED");
+  });
+
+  it("FAILED on the follow-up read releases the hold and says nothing was charged", async () => {
+    const { gate, quote, reap } = setup();
+    vi.spyOn(reap, "getCheckout").mockResolvedValue({ id: "x", status: "FAILED" });
+    const book = await gate.proposeCheckout({ quoteId: (await quote(BOOK)).id, reason: "", sessionId: "s" });
+    expect(book.decision).toBe("AUTO_EXECUTE");
+    expect(book.message).toContain("nothing was charged");
+    expect(getReservation(book.envelopeHash)?.status).toBe("RELEASED");
   });
 });

@@ -61,7 +61,7 @@ export function createMockReap(opts: { shipping?: number; quoteTtlMs?: number; n
     async getCheckout(id) {
       const checkout = checkouts.get(id);
       if (!checkout) throw new Error(`Checkout ${id} not found`);
-      return { ...checkout, status: "COMPLETED", orderId: `mock_order_${id}`, nextAction: undefined };
+      return { ...checkout };
     },
     async pollCheckout(id) {
       return this.getCheckout(id);

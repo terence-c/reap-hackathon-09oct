@@ -23,4 +23,4 @@ If `better-sqlite3` fails to load, your npm may skip install scripts (`npm confi
 
 Full team setup, the keys to fill in and the step by step checkout run: [SETUP.md](SETUP.md).
 
-Runs offline by default (`REAP_MODE=mock`: Reap simulated from recorded sandbox prices), since Reap invalidated the hackathon keys. See SETUP.md for live mode.
+Runs in `REAP_MODE=auto` by default: the live Reap sandbox answers quotes and checkouts, and when it cannot be reached (the hackathon keys were invalidated) recorded sandbox prices are used and clearly labeled as simulated. `REAP_MODE=mock` runs fully offline, `REAP_MODE=live` calls Reap only. See SETUP.md for live mode.

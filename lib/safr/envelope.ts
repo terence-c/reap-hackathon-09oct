@@ -99,6 +99,19 @@ export function verifyEnvelope(envelope: Envelope, publicKey: string | null | un
   }
 }
 
+// Signature only, without the schema or hash checks: is `envelope.signature` a valid Ed25519
+// signature over `envelope.hash` for this registered public key? The lifecycle checklist uses
+// this so a tampered row can fail the hash check while still showing the signature verified.
+export function verifyEnvelopeSignature(envelope: Envelope, publicKey: string | null | undefined): boolean {
+  if (!envelope.signature || !publicKey) return false;
+  try {
+    const key = createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" });
+    return verify(null, Buffer.from(envelope.hash), key, Buffer.from(envelope.signature, "base64"));
+  } catch {
+    return false;
+  }
+}
+
 // ---- Quote → catalog line. Quote has no sku, so match on merchant domain (unique in the catalog). ----
 
 export function findCatalogItem(catalog: CatalogItem[], quote: Quote): CatalogItem | undefined {

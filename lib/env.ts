@@ -23,7 +23,8 @@ const appSchema = z.object({
   DEMO_SIMULATE_WITHOUT_CARD: z.preprocess(blank, z.enum(["true", "false"]).default("false")),
   // "mock" runs the demo offline: lib/reap serves recorded sandbox prices and completes checkouts
   // in-process, with no Reap calls, so REAP_API_KEY may be empty or revoked. "live" calls Reap.
-  REAP_MODE: z.preprocess(blank, z.enum(["live", "mock"]).default("live")),
+  // "auto" (default) calls Reap and falls back to the recorded prices when it cannot be reached.
+  REAP_MODE: z.preprocess(blank, z.enum(["live", "mock", "auto"]).default("auto")),
   // Eager (not in the REAP_* group) so mock mode can read it without REAP_API_KEY.
   REAP_ENROLLMENT_ID: optional,
   // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.

@@ -22,7 +22,11 @@ const LIVE_MODE =
 // REAP_MODE=mock: the UI shows "Offline mode", so the model must not call these real sandbox checkouts.
 const OFFLINE_MODE =
   "Runtime: offline. Reap is simulated with prices recorded from its sandbox, so nothing goes over the network to Reap and no money moves. An allowed purchase goes to this simulated Reap, not to a real Reap sandbox checkout. Say the order was sent to Reap (simulated) and that the order status card will confirm it once it reports completed.";
-const runtimeNote = () => (reapMode() === "mock" ? OFFLINE_MODE : LIVE_MODE);
+// REAP_MODE=auto: live Reap sandbox, with recorded sandbox prices as fallback when it cannot be
+// reached. The getQuote output marks those with simulated: true.
+const AUTO_MODE =
+  "Runtime: automatic. Prices come from Reap's sandbox when it answers; when it cannot be reached, a price recorded from its sandbox is used and the tool output says simulated: true. When a price or order is simulated, say so plainly: it is recorded, no real payment happens and no money moves. Otherwise this works like live mode.";
+const runtimeNote = () => (reapMode() === "mock" ? OFFLINE_MODE : reapMode() === "auto" ? AUTO_MODE : LIVE_MODE);
 
 // The current spending limits, read from the server on every request. The model may describe them
 // but cannot change them; the gate re-checks every purchase against the stored copy anyway.
@@ -116,7 +120,7 @@ export async function POST(request: NextRequest) {
     messages: modelMessages,
     tools: createAgentTools({ agentId: env.AGENT_ID, sessionId }),
     providerOptions: { llm: { reasoningEffort: "none" } },
-    stopWhen: stepCountIs(6),
+    stopWhen: stepCountIs(10),
   });
 
   const response = result.toUIMessageStreamResponse({

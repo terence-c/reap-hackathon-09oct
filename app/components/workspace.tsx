@@ -4,15 +4,17 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import catalogJson from "@/lib/catalog.json";
-import type { CatalogItem } from "@/lib/types";
-import { fetchAgentState, type AgentStateResponse } from "@/lib/agent/state-client";
+import type { CatalogItem, ProposeCheckoutResult } from "@/lib/types";
+import { fetchAgentState, patchAgentState, type AgentStateResponse } from "@/lib/agent/state-client";
 import { formatMoney, plainText } from "./format";
 import { GovernancePanel } from "./governance-panel";
+import { SafrStateProvider } from "./safr-state";
 import { ToolPart } from "./tool-part";
 import { BrandMark, Icon, OrbitMark, type IconName } from "./ui";
 
 const catalog = catalogJson as unknown as CatalogItem[];
 const bySku = new Map(catalog.map((i) => [i.sku, i]));
+const DEV = process.env.NODE_ENV === "development";
 
 const QUICK_PROMPTS: {
   icon: IconName;
@@ -34,12 +36,23 @@ const QUICK_PROMPTS: {
 const transport = new DefaultChatTransport({ api: "/api/agent" });
 
 export function Workspace() {
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, status, error, setMessages, stop } = useChat({ transport });
   const [input, setInput] = useState("");
   const [state, setState] = useState<AgentStateResponse | null>(null);
+  const [reapLabel, setReapLabel] = useState("Reap sandbox");
   const [stateError, setStateError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [auto, setAuto] = useState<{ running: boolean; text: string; note: string | null } | null>(null);
+  const autoAbort = useRef(false);
+  const messagesRef = useRef(messages);
+  const errorRef = useRef(error);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    errorRef.current = error;
+  }, [error]);
 
   // Every refresh gets a number. A slow response that started before a newer one (say, a 2s poll
   // that was in flight when the spending limits were saved) is dropped instead of overwriting it.
@@ -53,6 +66,10 @@ export function Workspace() {
       applied.current = seq;
       setState(next);
       setStateError(null);
+      // "Reap simulated" when prices are recorded (mock) or live just fell back to them (last 2 min).
+      const mode = next.reap.mode;
+      const freshFallback = !!next.reap.lastFallback && Date.now() - Date.parse(next.reap.lastFallback.at) < 2 * 60_000;
+      setReapLabel(mode === "mock" || (mode === "auto" && freshFallback) ? "Reap simulated" : "Reap sandbox");
     };
     if (fresh) {
       apply(fresh);
@@ -81,17 +98,148 @@ export function Workspace() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
 
+  // A new gate decision in the stream means the panel is stale: refresh right away instead of
+  // waiting for the 2 s poll, so the SAFR checklist and pending approval show up together.
+  const seenDecisions = useRef(new Set<string>());
+  useEffect(() => {
+    for (const message of messages) {
+      if (message.role !== "assistant") continue;
+      for (const part of message.parts) {
+        const p = part as { type: string; state?: string; output?: unknown };
+        if (p.type !== "tool-proposeCheckout" || p.state !== "output-available") continue;
+        const hash = (p.output as { envelopeHash?: string } | undefined)?.envelopeHash;
+        if (hash && !seenDecisions.current.has(hash)) {
+          seenDecisions.current.add(hash);
+          void refreshState();
+        }
+      }
+    }
+  }, [messages, refreshState]);
+
   const busy = status === "submitted" || status === "streaming";
+  const running = auto?.running ?? false;
   const agentActive = state ? state.registry.status === "active" : null;
   const empty = messages.length === 0;
 
   function send(text: string) {
-    if (!text.trim() || busy) return;
+    if (!text.trim() || busy || running) return;
     void sendMessage({ text });
     setInput("");
   }
 
+  // "Run full demo": the demo script driven through the real chat, pausing for the human at the
+  // approval step. sendMessage resolves when the stream finishes (AI SDK v5), so steps just await.
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  function lastProposeOutput(): ProposeCheckoutResult | null {
+    const last = messagesRef.current.at(-1);
+    if (!last || last.role !== "assistant") return null;
+    for (let i = last.parts.length - 1; i >= 0; i--) {
+      const p = last.parts[i] as { type: string; state?: string; output?: unknown };
+      if (p.type === "tool-proposeCheckout" && p.state === "output-available" && p.output && typeof p.output === "object") {
+        return p.output as ProposeCheckoutResult;
+      }
+    }
+    return null;
+  }
+
+  async function runAutopilot() {
+    if (auto?.running) return;
+    autoAbort.current = false;
+    const total = DEV ? 8 : 7;
+    const step = (n: number, label: string, note: string | null = null) =>
+      setAuto({ running: true, text: `Autopilot: step ${n} of ${total} · ${label}`, note });
+    const stopped = () => autoAbort.current;
+    // sendMessage resolves when the stream ends, but React state (and so messagesRef) can lag
+    // a render behind it. Wait until the assistant's reply has actually been committed.
+    const waitForReply = async (before: number) => {
+      for (let i = 0; i < 60; i++) {
+        if (stopped()) return;
+        const last = messagesRef.current.at(-1);
+        if (messagesRef.current.length >= before + 2 && last?.role === "assistant") return;
+        await sleep(50);
+      }
+    };
+    let revoked = false;
+    let ended = "Autopilot finished.";
+    try {
+      if (DEV) {
+        step(0, "clean slate");
+        const response = await fetch("/api/dev/reset", { method: "POST" });
+        if (!response.ok) throw new Error("the demo could not be reset");
+        setMessages([]);
+        seenDecisions.current.clear();
+        await refreshState();
+      }
+      for (let i = 0; i < QUICK_PROMPTS.length; i++) {
+        const q = QUICK_PROMPTS[i];
+        step(i + 1, q.label);
+        const before = messagesRef.current.length;
+        await sendMessage({ text: q.prompt });
+        await waitForReply(before);
+        if (stopped()) throw new Error("Autopilot stopped.");
+        if (errorRef.current) throw new Error("the assistant could not answer");
+        const output = lastProposeOutput();
+        if (!output || !output.decision) {
+          step(i + 1, q.label, "The assistant did not ask for permission on this step.");
+        } else if (output.decision === "ESCALATE" && output.envelopeHash) {
+          step(i + 1, q.label, "Autopilot is waiting for you to approve or decline the request in the Permission card.");
+          // Poll the server, not stateRef: a fresh state can arrive before React renders it.
+          for (;;) {
+            if (stopped()) throw new Error("Autopilot stopped.");
+            try {
+              const s = await fetchAgentState();
+              void refreshState(s);
+              if (!s.approvals.some((a) => a.envelopeHash === output.envelopeHash)) break;
+            } catch {
+              // Transient read failure: keep waiting instead of ending the demo.
+            }
+            await sleep(1000);
+          }
+        }
+        await sleep(1500);
+      }
+      step(7, "F-Clamp Pegboard Panel (assistant paused)");
+      await patchAgentState({ action: "revoke" });
+      revoked = true;
+      await refreshState();
+      const before = messagesRef.current.length;
+      await sendMessage({ text: "Buy the F-Clamp Pegboard Panel" });
+      await waitForReply(before);
+      if (stopped()) throw new Error("Autopilot stopped.");
+      if (errorRef.current) throw new Error("the assistant could not answer");
+      await patchAgentState({ action: "restore" });
+      revoked = false;
+      await refreshState();
+      await sleep(1500);
+      if (DEV) {
+        step(8, "tamper check");
+        const response = await fetch("/api/dev/tamper", { method: "POST" });
+        if (!response.ok) throw new Error("a record could not be changed");
+        await refreshState();
+      }
+    } catch (e) {
+      ended = e instanceof Error && e.message === "Autopilot stopped." ? "Autopilot stopped." : `Autopilot stopped: ${e instanceof Error ? e.message : "something went wrong"}.`;
+    } finally {
+      if (revoked) {
+        try {
+          await patchAgentState({ action: "restore" });
+        } catch {
+          // Nothing else to try; the panel's pause switch still shows the real status.
+        }
+      }
+      await refreshState();
+      setAuto({ running: false, text: ended, note: null });
+    }
+  }
+
+  function stopAutopilot() {
+    autoAbort.current = true;
+    stop();
+  }
+
   return (
+    <SafrStateProvider value={{ state, refresh: () => void refreshState() }}>
     <main className="min-h-screen bg-paper px-4 pb-8 pt-6 text-ink sm:px-8">
       <div className="mx-auto max-w-[1500px]">
         <header className="ac-reveal flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-line pb-4">
@@ -114,7 +262,7 @@ export function Workspace() {
                   : "Assistant paused"}
             </span>
             <span className="ac-label rounded-full border border-line bg-white px-2.5 py-1 text-muted">
-              Reap sandbox
+              {reapLabel}
             </span>
           </div>
         </header>
@@ -162,8 +310,32 @@ export function Workspace() {
                   What would you like?
                 </h2>
               </div>
-              <p className="ac-label text-muted">Find items. Compare prices.</p>
+              <div className="flex items-center gap-3">
+                {running && auto && (
+                  <p role="status" aria-live="polite" className="ac-label text-violet">
+                    {auto.text}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => (running ? stopAutopilot() : void runAutopilot())}
+                  className="ac-focus-ring rounded-full border border-violet bg-white px-3 py-1.5 text-[11px] font-medium text-violet hover:bg-lavender"
+                >
+                  {running ? "Stop" : "Run full demo"}
+                </button>
+                <p className="ac-label text-muted">Find items. Compare prices.</p>
+              </div>
             </header>
+            {auto?.note && (
+              <p role="status" className="border-b border-line bg-peach/60 px-5 py-2 text-[12px] text-orange">
+                {auto.note}
+              </p>
+            )}
+            {auto && !auto.running && (
+              <p role="status" className="border-b border-line bg-paper px-5 py-2 text-[12px] text-muted">
+                {auto.text}
+              </p>
+            )}
 
             <div
               ref={scrollRef}
@@ -189,7 +361,7 @@ export function Workspace() {
                         <button
                           key={i}
                           type="button"
-                          disabled={busy}
+                          disabled={busy || running}
                           onClick={() => send(q.prompt)}
                           className={`ac-tile ac-focus-ring flex flex-col items-start gap-2 rounded-xl border border-line p-3 text-left disabled:opacity-50 ${q.tile}`}
                         >
@@ -280,7 +452,7 @@ export function Workspace() {
                   <button
                     key={i}
                     type="button"
-                    disabled={busy}
+                    disabled={busy || running}
                     onClick={() => send(q.prompt)}
                     title={bySku.get(q.sku)?.name ?? q.prompt}
                     className="ac-focus-ring flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-[11px] text-muted hover:border-violet hover:text-violet disabled:opacity-50"
@@ -309,6 +481,7 @@ export function Workspace() {
                   rows={2}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  disabled={running}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                       e.preventDefault();
@@ -320,7 +493,7 @@ export function Workspace() {
                 />
                 <button
                   type="submit"
-                  disabled={busy || !input.trim()}
+                  disabled={busy || running || !input.trim()}
                   className="ac-focus-ring flex h-11 items-center gap-2 rounded-xl bg-violet px-4 text-[13px] font-medium text-white disabled:opacity-40"
                 >
                   <Icon name="send" size={14} />
@@ -344,5 +517,6 @@ export function Workspace() {
         </div>
       </div>
     </main>
+    </SafrStateProvider>
   );
 }

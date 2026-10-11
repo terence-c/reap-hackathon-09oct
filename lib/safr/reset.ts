@@ -25,5 +25,5 @@ export function resetDemo(): ResetResult {
     | { public_key: string | null }
     | undefined;
   const card = database.prepare(`SELECT 1 FROM reap_enrollments WHERE status = 'ACTIVE' LIMIT 1`).get();
-  return { keyRegistered: !!key?.public_key, cardReady: !!card || !!env.REAP_ENROLLMENT_ID || env.REAP_MODE === "mock" };
+  return { keyRegistered: !!key?.public_key, cardReady: !!card || !!env.REAP_ENROLLMENT_ID || env.REAP_MODE !== "live" };
 }

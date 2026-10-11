@@ -51,6 +51,7 @@ export function createAgentTools(ctx: ToolContext) {
             });
             return {
               quote,
+              ...(quote.id.startsWith("mock_quote_") ? { simulated: true } : {}),
               total: formatMoney(quote.finalAmount),
               item: { sku: item.sku, name: item.name, unitPrice: item.unitPrice },
               note: `Amounts are integer cents. The total to pay is ${formatMoney(quote.finalAmount)} (quote.finalAmount). Delivery and tax are already included in it: never add them again. Show this total, then call proposeCheckout if the user wants to buy.`,

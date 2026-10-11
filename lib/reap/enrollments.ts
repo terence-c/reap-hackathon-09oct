@@ -8,10 +8,12 @@ import { z } from "zod";
 import { env } from "@/lib/env";
 import { db } from "../safr/db";
 import { reapFetch } from "./client";
+import { isFallbackWorthyError } from "./fallback";
 
 export const MOCK_ENROLLMENT_ID = "mock-enrollment";
 
 const mockMode = () => env.REAP_MODE === "mock";
+const autoMode = () => env.REAP_MODE === "auto";
 
 export type EnrollmentStatus = "REQUIRES_ACTION" | "ACTIVE" | "FAILED" | "EXPIRED" | "REVOKED";
 export type Enrollment = { id: string; status: EnrollmentStatus; url?: string; updatedAt: string };
@@ -52,7 +54,9 @@ export function currentEnrollment(): Enrollment | null {
 // Re-check every enrollment still waiting for card details (Reap can take a while to mark one ACTIVE).
 export async function refreshPendingEnrollments(): Promise<void> {
   if (mockMode()) return; // nothing to ask Reap; mock enrollments are ACTIVE from the start
-  const rows = db().prepare(`SELECT id, owner_id FROM reap_enrollments WHERE status = 'REQUIRES_ACTION'`).all() as {
+  const rows = db()
+    .prepare(`SELECT id, owner_id FROM reap_enrollments WHERE status = 'REQUIRES_ACTION' AND id NOT LIKE 'mock-enrollment%'`)
+    .all() as {
     id: string;
     owner_id: string;
   }[];
@@ -66,20 +70,36 @@ export async function refreshPendingEnrollments(): Promise<void> {
 }
 
 // What the gate charges: the newest ACTIVE enrollment from the app, else REAP_ENROLLMENT_ID
-// (else, in mock mode, MOCK_ENROLLMENT_ID).
+// (else, outside live mode, MOCK_ENROLLMENT_ID: a simulated quote must never need a live card).
 export function activeEnrollmentId(): string | undefined {
   const row = db()
     .prepare(`SELECT id FROM reap_enrollments WHERE status = 'ACTIVE' ORDER BY created_at DESC, rowid DESC LIMIT 1`)
     .get() as { id: string } | undefined;
-  return row?.id ?? env.REAP_ENROLLMENT_ID ?? (mockMode() ? MOCK_ENROLLMENT_ID : undefined);
+  return row?.id ?? env.REAP_ENROLLMENT_ID ?? (mockMode() || autoMode() ? MOCK_ENROLLMENT_ID : undefined);
+}
+
+function mockEnrollment(ownerId: string): Enrollment {
+  const id = `${MOCK_ENROLLMENT_ID}-${crypto.randomUUID().slice(0, 8)}`;
+  save({ id, status: "ACTIVE" }, ownerId);
+  return storedEnrollment(id);
 }
 
 export async function createEnrollment(input: { ownerId: string; email: string; returnUrl: string }): Promise<Enrollment> {
   if (mockMode()) {
-    const id = `${MOCK_ENROLLMENT_ID}-${crypto.randomUUID().slice(0, 8)}`;
-    save({ id, status: "ACTIVE" }, input.ownerId);
-    return storedEnrollment(id);
+    return mockEnrollment(input.ownerId);
   }
+  if (autoMode()) {
+    try {
+      return await liveEnrollment(input);
+    } catch (error) {
+      if (!isFallbackWorthyError(error)) throw error;
+      return mockEnrollment(input.ownerId);
+    }
+  }
+  return liveEnrollment(input);
+}
+
+async function liveEnrollment(input: { ownerId: string; email: string; returnUrl: string }): Promise<Enrollment> {
   if (new URL(input.returnUrl).protocol !== "https:") {
     throw new Error(`Enrollment returnUrl must be HTTPS (got ${input.returnUrl}); use npm run dev:https`);
   }
@@ -104,9 +124,9 @@ function storedEnrollment(id: string): Enrollment {
 
 // Re-reads one enrollment from Reap and stores its status.
 export async function refreshEnrollment(id: string, ownerId: string): Promise<Enrollment> {
-  if (mockMode()) {
+  if (mockMode() || (autoMode() && id.startsWith(MOCK_ENROLLMENT_ID))) {
     const row = db().prepare(`SELECT id FROM reap_enrollments WHERE id = ?`).get(id);
-    if (!row) throw new Error(`Enrollment ${id} is not stored (REAP_MODE=mock does not call Reap)`);
+    if (!row) throw new Error(`Enrollment ${id} is not stored (offline modes do not call Reap)`);
     return storedEnrollment(id);
   }
   const e = EnrollmentResponseSchema.parse(await reapFetch(`/agentic/enrollments/${encodeURIComponent(id)}`));

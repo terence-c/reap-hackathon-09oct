@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { CatalogItem, CheckoutStatus, Decision, Money, Quote } from "@/lib/types";
+import type { PolicyCheck } from "@/lib/safr/policies";
 import { formatMoney, plainText, shortHash } from "./format";
+import { checklistCounts, PolicyChecklist } from "./policy-checklist";
+import { useSafrState } from "./safr-state";
 
 export const DECISION_LABELS: Record<Decision, string> = {
   AUTO_EXECUTE: "Allowed",
@@ -62,6 +65,11 @@ export function ToolPart({ part }: { part: ToolPartLike }) {
     return (
       <div className="rounded-lg border border-line bg-paper p-3 font-mono text-[11px] text-muted">
         {RUNNING_LABELS[name] ?? "Working..."}
+        {part.type === "tool-proposeCheckout" && (
+          <div className="mt-2 font-sans">
+            <PolicyChecklist entry={undefined} evaluating compact />
+          </div>
+        )}
       </div>
     );
   }
@@ -135,6 +143,13 @@ function QuoteResult({ output }: { output?: Record<string, unknown> }) {
       </div>
       <div className="px-3 py-2.5 text-[13px]">
         <p className="mb-1.5 font-medium text-ink">{plainText(item?.name ?? quote.merchantDomain)}</p>
+        {quote.id.startsWith("mock_quote_") && (
+          <p className="mb-1.5">
+            <span className="ac-label inline-block rounded-full border border-blue/30 bg-sky px-2 py-0.5 text-blue">
+              Simulated price (recorded from Reap&apos;s sandbox)
+            </span>
+          </p>
+        )}
         <dl className="space-y-1">
           {rows.map(([label, money]) => (
             <div key={label} className="flex justify-between">
@@ -161,11 +176,19 @@ function QuoteResult({ output }: { output?: Record<string, unknown> }) {
 }
 
 function DecisionResult({ output }: { output?: Record<string, unknown> }) {
+  const { state } = useSafrState();
   const decision = output?.decision as Decision | undefined;
   const message = typeof output?.message === "string" ? output.message : "";
   const approvalUrl = typeof output?.approvalUrl === "string" ? output.approvalUrl : undefined;
   const checkoutId = typeof output?.checkoutId === "string" ? output.checkoutId : undefined;
   const envelopeHash = typeof output?.envelopeHash === "string" ? output.envelopeHash : "";
+  // The audit entry for this decision may not be in state yet (the poll runs every 2 s);
+  // until it is, the checklist shows the rows as still being checked.
+  const entry = envelopeHash
+    ? [...(state?.audit ?? [])].reverse().find((e) => e.envelope.hash === envelopeHash)
+    : undefined;
+  const lifecycle: PolicyCheck[] | undefined = entry ? state?.lifecycle[entry.seq] : undefined;
+  const { passed, evaluated } = checklistCounts(entry, lifecycle);
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-white">
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-paper px-3 py-2">
@@ -174,6 +197,16 @@ function DecisionResult({ output }: { output?: Record<string, unknown> }) {
       </div>
       <div className="px-3 py-2.5 text-[13px]">
         <p className="text-ink">{plainText(message)}</p>
+        {envelopeHash && (
+          <details open className="mt-2">
+            <summary className="ac-focus-ring cursor-pointer rounded text-[11px] text-muted">
+              {entry ? `SAFR checks: ${passed} of ${evaluated} passed` : "SAFR checks: checking..."}
+            </summary>
+            <div className="mt-2">
+              <PolicyChecklist entry={entry} lifecycle={lifecycle} evaluating={!entry} compact />
+            </div>
+          </details>
+        )}
         {checkoutId && <OrderStatus checkoutId={checkoutId} approvalUrl={approvalUrl} />}
         {envelopeHash && (
           <details className="mt-2">
@@ -328,12 +361,14 @@ export function OrderStatus({ checkoutId, approvalUrl }: { checkoutId: string; a
   }
   if (view.status === "COMPLETED") {
     const parts = [view.orderId, view.finalAmount ? formatMoney(view.finalAmount) : undefined].filter(Boolean);
+    const simulated = checkoutId.startsWith("mock_checkout_") || checkoutId.startsWith("sim_");
     return (
       <p
         role="status"
         className="mt-2 break-words rounded-lg border border-teal/40 bg-mint px-3 py-2 text-[13px] font-medium text-teal"
       >
         {parts.length > 0 ? `Order confirmed: ${parts.join(" · ")}` : "Order confirmed by Reap."}
+        {simulated ? " (simulated)" : ""}
       </p>
     );
   }

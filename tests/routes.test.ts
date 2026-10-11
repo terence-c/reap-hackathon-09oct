@@ -9,6 +9,7 @@ import { getAgent } from "@/lib/safr/registry";
 import { APPROVAL_WINDOW_MS } from "@/lib/safr/windows";
 import { AGENT_ID, setup, START } from "./helpers";
 
+import * as agentStateRoute from "@/app/api/agent/state/route";
 import * as approvalsRoute from "@/app/api/approvals/route";
 import * as auditRoute from "@/app/api/audit/route";
 import * as checkoutRoute from "@/app/api/checkout/route";
@@ -272,6 +273,35 @@ describe("POST /api/registry", () => {
     expect((await registryRoute.POST(post("/api/registry", { status: "ACTIVE" }, { host: "localhost:3443" }))).status).toBe(200);
     expect(getAgent(AGENT_ID)?.status).toBe("ACTIVE");
     expect((await registryRoute.POST(post("/api/registry", { agentId: "nobody", status: "ACTIVE" }))).status).toBe(404);
+  });
+});
+
+describe("GET /api/agent/state", () => {
+  it("reports lifecycle checks per audit entry and the reap status", async () => {
+    const env = setup();
+    const book = await propose(env, "popular-ghost-stories-12");
+    const denied = await propose(env, "brewlander-6pack");
+
+    const body = await (await agentStateRoute.GET()).json();
+    expect(body.reap).toEqual({ mode: "live", lastFallback: null });
+    const executedSeq = body.audit.find((e: { envelope: { hash: string } }) => e.envelope.hash === book.envelopeHash).seq;
+    const deniedSeq = body.audit.find((e: { envelope: { hash: string } }) => e.envelope.hash === denied.envelopeHash).seq;
+    const executed = Object.fromEntries(body.lifecycle[executedSeq].map((c: { id: string; result: string }) => [c.id, c.result]));
+    expect(executed).toMatchObject({
+      TOOLS_ALLOWED: "pass",
+      PRICE_FROM_REAP: "pass",
+      RECORD_UNCHANGED: "pass",
+      CHAIN_INTACT: "pass",
+      PAYMENT_CONFIRMED: "pending", // checkout created, still awaiting Reap's final status
+    });
+    const refused = Object.fromEntries(body.lifecycle[deniedSeq].map((c: { id: string; result: string }) => [c.id, c.result]));
+    expect(refused.PAYMENT_CONFIRMED).toBe("skipped");
+
+    audit.tamperForDemo(executedSeq);
+    const tampered = await (await agentStateRoute.GET()).json();
+    const after = Object.fromEntries(tampered.lifecycle[executedSeq].map((c: { id: string; result: string }) => [c.id, c.result]));
+    expect(after.RECORD_UNCHANGED).toBe("fail");
+    expect(after.CHAIN_INTACT).toBe("fail");
   });
 });
 

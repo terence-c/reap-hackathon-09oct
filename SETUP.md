@@ -33,11 +33,19 @@ Up to four blanks in `.env.local` need a value; everything else is preset, inclu
 - Also from the Reap desk: the sandbox test card number (listed in `NOTES.md`), typed once on Reap's hosted page and never stored by AgentCart.
 - Leave `REAP_BASE_URL`, `REAP_API_VERSION` (`2025-02-14`, from Reap's API reference), `DEMO_EMAIL` and `AGENT_ID` as they are. For another LLM provider, change `OPENAI_BASE_URL` and `OPENAI_MODEL` together; the model must support tool calling.
 
-## Offline mode (default)
+## Reap modes (default: auto)
 
-Reap invalidated the hackathon sandbox keys after the event, so `.env.example` ships with `REAP_MODE=mock`. In offline mode Reap is simulated with prices recorded from its sandbox: quotes match what Reap returned on 9 Oct 2026, and checkouts the gate allows complete on their own (no approval click). The panel labels it "Offline mode". Every SAFR rule, approval, the activity log and the policy checklist run exactly as in live mode. No Reap key or card is needed; `npm run reset-demo` gives a clean demo.
+Reap invalidated the hackathon sandbox keys after the event, so `.env.example` ships with `REAP_MODE=auto`:
 
-For real Reap: put a valid sandbox key in `REAP_API_KEY`, set `REAP_MODE=live`, run `npm run dev:https`, then add a card (below). In live mode Reap's sandbox asks you to approve each checkout on its hosted page, because Reap's pre-approved mandates are not available yet.
+- `auto` (default): tries the live Reap sandbox first. When Reap cannot be reached (invalid key, outage such as brewlander.com's 503, network error), that quote uses prices recorded from Reap's sandbox instead, and the app labels it simulated (header pill "Reap simulated", a panel note, and a chip on the price). After a fallback it waits 60 seconds before trying live again. With the current revoked key every quote falls back.
+- `mock`: fully offline. Reap is simulated with prices recorded from its sandbox (what Reap returned on 9 Oct 2026). The panel labels it "Offline mode".
+- `live`: real Reap only, no fallback. Needs a valid `REAP_API_KEY`.
+
+In `auto` (when falling back) and `mock`, checkouts the gate allows complete on their own (no approval click). Every SAFR rule, approval, the activity log and the policy checklist run exactly as in live mode. No Reap key or card is needed; `npm run reset-demo` gives a clean demo.
+
+For real Reap: put a valid sandbox key in `REAP_API_KEY`, set `REAP_MODE=live` (or keep `auto`), run `npm run dev:https`, then add a card (below). In sandbox the app sends `X-Simulate-Checkout: COMPLETED`, which should complete checkouts without Reap's hosted approval page; if Reap ignores it, approve each checkout on Reap's page.
+
+Checks: `npm test`, `REAP_MODE=auto npm run smoke`, and `npm run e2e:agent` (the real LLM runs the 8-step demo over HTTP against the dev server on https://localhost:3443; it resets the demo data before and after).
 
 ## Run a real checkout
 

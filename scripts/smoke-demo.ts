@@ -9,6 +9,10 @@
 // REAP_MODE=mock npm run smoke — offline: recorded sandbox prices, checkouts COMPLETED in-process,
 // no network, no REAP_API_KEY, and data/safr.db is never opened. An ephemeral agent key is used
 // if AGENT_PRIVATE_KEY is empty.
+//
+// REAP_MODE=auto npm run smoke — live sandbox first, recorded prices when it cannot be reached
+// (e.g. a revoked key). The mock enrollment is used when there is no ACTIVE live card, and the
+// output shows which adapter priced each step.
 
 import "./load-env";
 import catalog from "../lib/catalog.json";
@@ -51,16 +55,19 @@ async function checkCheckout(result: ProposeCheckoutResult): Promise<Check> {
 }
 
 async function main() {
-  const mock = reapMode() === "mock";
-  console.log(`Reap mode: ${mock ? "mock (recorded sandbox prices, no network)" : "live (Reap sandbox)"}`);
+  const mode = reapMode();
+  const mock = mode === "mock";
+  console.log(
+    `Reap mode: ${mock ? "mock (recorded sandbox prices, no network)" : mode === "auto" ? "auto (Reap sandbox, recorded prices when it cannot be reached)" : "live (Reap sandbox)"}`,
+  );
   let privateKey = env.AGENT_PRIVATE_KEY;
   if (!privateKey) {
-    if (!mock) throw new Error("AGENT_PRIVATE_KEY is empty: run npm run keygen");
+    if (!mock && mode !== "auto") throw new Error("AGENT_PRIVATE_KEY is empty: run npm run keygen");
     privateKey = generateAgentKeyPair().privateKey; // registered below, in the in-memory DB only
   }
 
   let enrollmentId: string | undefined;
-  if (mock) {
+  if (mode !== "live") {
     openInMemoryDb(); // first, so data/safr.db is never opened
     enrollmentId = activeEnrollmentId(); // REAP_ENROLLMENT_ID, else the mock enrollment
   } else {
@@ -93,12 +100,13 @@ async function main() {
   async function step(name: string, sku: string, expected: Decision, expectedRule?: string, after?: (r: ProposeCheckoutResult) => Promise<Check>) {
     try {
       const { quote, result } = await propose(sku);
+      const adapter = quote.id.startsWith("mock_quote_") ? "recorded" : "live";
       const fired = rules(result);
       const decided = result.decision === expected && (!expectedRule || fired.includes(expectedRule));
       const check = after ? await after(result) : null;
       const extra = check ? ` · ${check.text}` : "";
       const ok = decided && (check?.ok ?? true);
-      rows.push({ step: name, expected: `${expected}${expectedRule ? ` ${expectedRule}` : ""}`, got: `${result.decision} [${fired}] ${formatMoney(quote.finalAmount)}${extra}`, ok });
+      rows.push({ step: name, expected: `${expected}${expectedRule ? ` ${expectedRule}` : ""}`, got: `${result.decision} [${fired}] ${formatMoney(quote.finalAmount)} (${adapter})${extra}`, ok });
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

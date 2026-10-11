@@ -8,11 +8,41 @@ import { env } from "@/lib/env";
 import { isSameOrigin, jsonError, readJsonBody } from "@/lib/agent/http";
 import type { AgentStateResponse } from "@/lib/agent/state-client";
 import { list, verifyChain } from "@/lib/safr/audit";
-import { committed, loadMandate, saveMandate } from "@/lib/safr/controls";
+import { committed, getReservation, loadMandate, saveMandate } from "@/lib/safr/controls";
+import { hashEnvelope, verifyEnvelopeSignature } from "@/lib/safr/envelope";
 import { gate } from "@/lib/safr/gate";
-import { getAgent, listToolEvents, setAgentStatus } from "@/lib/safr/registry";
+import { lifecycleChecks } from "@/lib/safr/lifecycle";
+import type { PolicyCheck } from "@/lib/safr/policies";
+import { getAgent, listToolDenials, listToolEvents, setAgentStatus } from "@/lib/safr/registry";
 import { currentEnrollment } from "@/lib/reap/enrollments";
-import { reapMode } from "@/lib/reap";
+import { reapMode, reapStatus } from "@/lib/reap";
+
+// Lifecycle checks (tools used, records intact, payment confirmed) for the newest entries.
+// Computed live — never stored — so a tampered row fails them on the very next read.
+function lifecycleFor(entries: AgentStateResponse["audit"]): Record<number, PolicyCheck[]> {
+  const agent = getAgent(env.AGENT_ID);
+  const chain = verifyChain();
+  const deniedSessions = new Set(listToolDenials(200).map((d) => d.sessionId));
+  const lifecycle: Record<number, PolicyCheck[]> = {};
+  for (const entry of entries.slice(-30)) {
+    let hashOk = false;
+    try {
+      hashOk = hashEnvelope(entry.envelope) === entry.envelope.hash;
+    } catch {
+      hashOk = false;
+    }
+    lifecycle[entry.seq] = lifecycleChecks({
+      entry,
+      allowedTools: agent?.allowedTools ?? [],
+      deniedToolInSession: deniedSessions.has(entry.envelope.sessionId),
+      hashOk,
+      signatureOk: verifyEnvelopeSignature(entry.envelope, agent?.publicKey),
+      chain: chain.ok ? { ok: true } : { ok: false, brokenAtSeq: chain.brokenAtSeq },
+      reservation: getReservation(entry.envelope.hash)?.status ?? null,
+    });
+  }
+  return lifecycle;
+}
 
 function liveState(): AgentStateResponse {
   // Expire timed-out approvals first so the budget figures don't count their released holds.
@@ -20,6 +50,7 @@ function liveState(): AgentStateResponse {
   const mandate = loadMandate();
   const { reserved, settled } = committed(mandate.id);
   const agent = getAgent(env.AGENT_ID);
+  const audit = list();
   return {
     mode: "live",
     reapMode: reapMode(),
@@ -43,11 +74,13 @@ function liveState(): AgentStateResponse {
           publicKeyFingerprint: null,
           status: "revoked",
         },
-    audit: list(),
+    audit,
+    lifecycle: lifecycleFor(audit),
     toolEvents: listToolEvents(),
     chainVerified: verifyChain().ok,
     approvals: gate.listPendingApprovals(),
     enrollment: currentEnrollment(),
+    reap: reapStatus(),
   };
 }
 

@@ -2,7 +2,7 @@
 // "Safeguards for Agentic Finance at Runtime"). Pure data, safe to import in client components:
 // the panel renders this list and ticks each policy off from the latest decision's checks.
 
-export type PolicyComponent = "Agent identity" | "Controls" | "Disposition" | "Human oversight";
+export type PolicyComponent = "Agent identity" | "Controls" | "Disposition" | "Human oversight" | "Record keeping" | "Payment";
 
 export type PolicyId =
   | "IDENTITY_REGISTERED"
@@ -20,11 +20,18 @@ export type PolicyId =
   | "WITHIN_BUDGET_LEFT"
   | "UNDER_AUTO_LIMIT"
   | "NOT_A_REPEAT"
-  | "HUMAN_APPROVAL";
+  | "HUMAN_APPROVAL"
+  | "TOOLS_ALLOWED"
+  | "PRICE_FROM_REAP"
+  | "LOGGED_BEFORE_PAYMENT"
+  | "RECORD_UNCHANGED"
+  | "CHAIN_INTACT"
+  | "PAYMENT_CONFIRMED";
 
 // pass: the policy holds. fail: it blocked the purchase. flag: it did not block, but changed the
-// outcome (needs approval / flagged as a repeat). skipped: not reached because an earlier policy failed.
-export type PolicyResult = "pass" | "fail" | "flag" | "skipped";
+// outcome (needs approval / flagged as a repeat). skipped: not reached because an earlier policy
+// failed. pending: lifecycle only — decided but not yet confirmed (payment still in flight).
+export type PolicyResult = "pass" | "fail" | "flag" | "skipped" | "pending";
 
 export type PolicyCheck = { id: PolicyId; result: PolicyResult };
 
@@ -53,6 +60,53 @@ export const POLICIES: readonly Policy[] = [
   { id: "NOT_A_REPEAT", component: "Disposition", title: "Not a repeat purchase from the same shop", rule: "VELOCITY" },
   { id: "HUMAN_APPROVAL", component: "Human oversight", title: "A person approved it", rule: "HUMAN_APPROVED" },
 ] as const;
+
+// Lifecycle policies: what the purchase does after the decision (logged first, records intact,
+// payment confirmed). Computed live on every read — never stored, so they can't be tampered
+// with and old audit rows still verify. lib/safr/lifecycle.ts evaluates them.
+export type LifecyclePolicy = { id: PolicyId; component: PolicyComponent; title: string };
+
+export const LIFECYCLE_POLICIES: readonly LifecyclePolicy[] = [
+  { id: "TOOLS_ALLOWED", component: "Agent identity", title: "Only allowed shopping actions were used" },
+  { id: "PRICE_FROM_REAP", component: "Controls", title: "Price taken from Reap's quote, not from the assistant" },
+  { id: "LOGGED_BEFORE_PAYMENT", component: "Record keeping", title: "Decision recorded before any payment" },
+  { id: "RECORD_UNCHANGED", component: "Record keeping", title: "Purchase details unchanged since signing" },
+  { id: "CHAIN_INTACT", component: "Record keeping", title: "Activity records unchanged" },
+  { id: "PAYMENT_CONFIRMED", component: "Payment", title: "Reap confirmed the payment" },
+] as const;
+
+// The order the checklist shows and ticks off: 16 decision-time policies interleaved with the
+// lifecycle ones, in evaluation order.
+export const CHECKLIST_ORDER: readonly PolicyId[] = [
+  "TOOLS_ALLOWED",
+  "IDENTITY_REGISTERED",
+  "IDENTITY_ACTIVE",
+  "IDENTITY_SIGNATURE",
+  "IDENTITY_ACTION",
+  "IDENTITY_PRINCIPAL",
+  "PRICE_FROM_REAP",
+  "KILL_SWITCH_OFF",
+  "MANDATE_IN_EFFECT",
+  "QUOTE_FRESH",
+  "CURRENCY_ALLOWED",
+  "CATEGORY_ALLOWED",
+  "MERCHANT_ALLOWED",
+  "WITHIN_TOTAL_BUDGET",
+  "WITHIN_BUDGET_LEFT",
+  "UNDER_AUTO_LIMIT",
+  "NOT_A_REPEAT",
+  "HUMAN_APPROVAL",
+  "LOGGED_BEFORE_PAYMENT",
+  "RECORD_UNCHANGED",
+  "CHAIN_INTACT",
+  "PAYMENT_CONFIRMED",
+];
+
+// id → display info for every policy (decision-time and lifecycle), for the checklist.
+export const POLICY_BY_ID: Readonly<Record<PolicyId, { component: PolicyComponent; title: string }>> = {
+  ...Object.fromEntries(POLICIES.map((p) => [p.id, { component: p.component, title: p.title }])),
+  ...Object.fromEntries(LIFECYCLE_POLICIES.map((p) => [p.id, { component: p.component, title: p.title }])),
+} as Record<PolicyId, { component: PolicyComponent; title: string }>;
 
 // The rule code a policy records when it fails or flags, for mapping old audit rows (no checks
 // stored) back onto the checklist. Approval-time outcomes map onto the same policies.
