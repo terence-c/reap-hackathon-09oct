@@ -426,7 +426,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
     <li><strong>Open-network identity resolution.</strong> The agent is looked up by ID in our own SQLite registry. There is no discovery of agents run by other organisations and no certificate chain to an outside authority.</li>
     <li><strong>Multiple registries.</strong> One registry, one agent (<code>purchasing-agent-v1</code>), one principal (<code>demo-user-001</code>).</li>
     <li><strong>Evidence-quality controls.</strong> The agent's stated reason is stored as data (trimmed to 500 characters) and never parsed or scored.</li>
-    <li><strong>Rate limits beyond a simple velocity rule.</strong> <code>VELOCITY</code> flags any repeat purchase from the same merchant within 5 minutes. There are no hourly caps and no anomaly models.</li>
+    <li><strong>Rate limits beyond a simple velocity rule.</strong> <code>VELOCITY</code> flags any repeat purchase from the same merchant within 15 minutes. There are no hourly caps and no anomaly models.</li>
     <li><strong>Reviewer authentication.</strong> <code>POST /api/approvals</code> accepts any reviewer name of 1 to 100 characters; the app sends "You". No route has user authentication; the chat, state and tamper routes check the request comes from the same origin.</li>
     <li><strong>Independent key custody.</strong> The private key (<code>AGENT_PRIVATE_KEY</code>) is held by the same server that verifies it. The signature proves the record was not altered after sealing and binds it to the registered key; it does not prove a separate agent runtime produced it.</li>
     <li><strong>An external anchor for the log.</strong> The chain lives in the same SQLite file the app writes, so it is tamper-evident, not tamper-proof: someone with the file could rebuild the whole chain. Publishing the latest hash somewhere else is the next step.</li>
@@ -533,7 +533,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
 
         <rect x="680" y="372" width="160" height="44" rx="10" fill="#e5f0fc" stroke="#b9d3f3"/>
         <text class="dg-t" x="760" y="390" text-anchor="middle">Observe</text>
-        <text class="dg-s" x="760" y="407" text-anchor="middle">repeat within 5 minutes</text>
+        <text class="dg-s" x="760" y="407" text-anchor="middle">repeat within 15 minutes</text>
 
         <!-- Row D -->
         <path class="edge" d="M120,416 V438" marker-end="url(#ah)"/>
@@ -662,7 +662,7 @@ footer.page-foot { margin-top: 72px; padding-top: 16px; border-top: 1px solid va
         <tr><td>12</td><td><code>OVER_HARD_CAP</code></td><td><span class="badge b-deny">DENY</span></td><td>{amount} is over the mandate's {totalBudget} total budget, so this purchase is blocked.</td></tr>
         <tr><td>13</td><td><code>OVER_REMAINING_BUDGET</code></td><td><span class="badge b-deny">DENY</span></td><td>{amount} is more than the {left} left in this mandate's budget, so this purchase is blocked.</td></tr>
         <tr><td>14</td><td><code>OVER_AUTO_THRESHOLD</code></td><td><span class="badge b-esc">ESCALATE</span></td><td>{amount} is above the {autoThreshold} auto-approve limit, so a human must approve it. (Strictly above; exactly at the limit auto-executes.)</td></tr>
-        <tr><td>15</td><td><code>VELOCITY</code></td><td><span class="badge b-obs">OBSERVE</span></td><td>{amount} is within the mandate, but it is a repeat purchase from {merchant} within 5 minutes, so it goes ahead flagged for review. (If 14 also fires, the outcome is Escalate with both rules.)</td></tr>
+        <tr><td>15</td><td><code>VELOCITY</code></td><td><span class="badge b-obs">OBSERVE</span></td><td>{amount} is within the mandate, but it is a repeat purchase from {merchant} within 15 minutes, so it goes ahead flagged for review. (If 14 also fires, the outcome is Escalate with both rules.)</td></tr>
         <tr><td></td><td>(none)</td><td><span class="badge b-auto">AUTO_EXECUTE</span></td><td>{amount} is within the mandate and under the {autoThreshold} auto-approve limit, so it goes ahead automatically.</td></tr>
       </tbody>
     </table>
@@ -946,7 +946,7 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
           <td>6</td>
           <td>Ghost Stories again, within 5 minutes of step 1: "Buy the True Singapore Ghost Stories Book 12 again" (tile 06).</td>
           <td>Gets a fresh quote, asks again, says it went ahead and was sent to Reap with a note that it was a repeat.</td>
-          <td><span class="badge b-obs">Already checked</span> rules: <code>VELOCITY</code>. "{total} is within the mandate, but it is a repeat purchase from popular.com.sg within 5 minutes, so it goes ahead flagged for review." Activity: Already checked, "Sent to Reap".</td>
+          <td><span class="badge b-obs">Already checked</span> rules: <code>VELOCITY</code>. "{total} is within the mandate, but it is a repeat purchase from popular.com.sg within 15 minutes, so it goes ahead flagged for review." Activity: Already checked, "Sent to Reap".</td>
           <td>Quote, checkout, poll to <code>COMPLETED</code>, as in step 1.</td>
           <td>"A high-frequency pattern: flagged, not blocked. It goes through, but the record says it was a repeat."</td>
           <td>(ii) High-frequency small payments</td>
@@ -984,7 +984,7 @@ npx tsx scripts/quote.ts brewlander-6pack   <span class="c"># one quote for one 
   </div>
 
   <div class="note warn">
-    <p><strong>Step notes.</strong> Step 6 needs the real clock to be within 5 minutes of step 1's proposal, or it will be an ordinary Allowed. If delivery fees have used up more of the budget than expected, step 6 shows <code>OVER_REMAINING_BUDGET</code> instead. The category rule in step 5 is covered by <code>tests/gate.test.ts</code> ("demo script, in order") and <code>tests/disposition.test.ts</code> ("beer S$33 → DENY CATEGORY_OUT_OF_SCOPE"). In steps 7 and 8 the gate stops the book before any budget or velocity rule, so the repeat does not matter. The agent is shown its current limits, kill switch included; if it declines to ask in step 7, reply "Ask for permission anyway": the point is that the gate, not the agent, stops it. Do not run <code>npm run reset-demo</code> between steps; it empties the log.</p>
+    <p><strong>Step notes.</strong> Step 6 needs the real clock to be within 15 minutes of step 1's proposal, or it will be an ordinary Allowed. If delivery fees have used up more of the budget than expected, step 6 shows <code>OVER_REMAINING_BUDGET</code> instead. The category rule in step 5 is covered by <code>tests/gate.test.ts</code> ("demo script, in order") and <code>tests/disposition.test.ts</code> ("beer S$33 → DENY CATEGORY_OUT_OF_SCOPE"). In steps 7 and 8 the gate stops the book before any budget or velocity rule, so the repeat does not matter. The agent is shown its current limits, kill switch included; if it declines to ask in step 7, reply "Ask for permission anyway": the point is that the gate, not the agent, stops it. Do not run <code>npm run reset-demo</code> between steps; it empties the log.</p>
   </div>
 
   <h3>Timing</h3>
