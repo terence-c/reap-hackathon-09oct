@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import catalogJson from "@/lib/catalog.json";
 import type { AuditEntry, CatalogItem, ProposeCheckoutResult } from "@/lib/types";
 import {
@@ -9,14 +9,48 @@ import {
   type Enrollment,
 } from "@/lib/agent/state-client";
 import { ApprovalCard } from "./approval-card";
-import { formatMoney, plainText, shortHash } from "./format";
+import { PolicyChecklist } from "./policy-checklist";
+import { formatMoney, plainText, ruleLabel, shortHash } from "./format";
 import { MandateEditor } from "./mandate-editor";
 import { DecisionBadge, OrderStatus } from "./tool-part";
 import { EnvelopeOutline } from "./ui";
 
 const catalog = catalogJson as unknown as CatalogItem[];
 const bySku = new Map(catalog.map((i) => [i.sku, i]));
-const DEV = process.env.NODE_ENV !== "production";
+const DEV = process.env.NODE_ENV === "development";
+const ACTIVITY_LIMIT = 20;
+
+type OnMutate = (fresh?: AgentStateResponse) => void;
+
+function itemNames(entry: AuditEntry): string {
+  return entry.envelope.action.items
+    .map((i) => {
+      const name = plainText(bySku.get(i.sku)?.name ?? i.sku);
+      return i.quantity > 1 ? `${name} × ${i.quantity}` : name;
+    })
+    .join(", ");
+}
+
+function RuleChips({ rules }: { rules: string[] }) {
+  if (rules.length === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1">
+      {rules.map((rule) => (
+        <span
+          key={rule}
+          title={rule}
+          className="rounded-full border border-line bg-white px-2 py-0.5 text-[10px] text-muted"
+        >
+          {ruleLabel(rule)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function Loading({ failed }: { failed: boolean }) {
+  return <p className="text-[13px] text-muted">{failed ? "Details unavailable right now." : "Loading..."}</p>;
+}
 
 function Section({
   index,
@@ -58,7 +92,7 @@ function PaymentCard({
   onMutate,
 }: {
   enrollment: Enrollment | null;
-  onMutate: () => void;
+  onMutate: OnMutate;
 }) {
   const [working, setWorking] = useState<"add" | "check" | null>(null);
   const [error, setError] = useState("");
@@ -69,7 +103,13 @@ function PaymentCard({
     try {
       const response = await fetch("/api/enrollment", { method: "POST" });
       if (!response.ok) throw new Error(await readError(response, "Could not start adding a card"));
-      const data = (await response.json()) as { enrollment?: { url?: string } };
+      const data = (await response.json()) as { enrollment?: { url?: string; status?: string } };
+      // Offline mode (and any already-active card): nothing to enter on Reap's page.
+      if (data.enrollment?.status === "ACTIVE") {
+        setWorking(null);
+        onMutate();
+        return;
+      }
       const url = data.enrollment?.url;
       if (!url?.startsWith("https://")) {
         throw new Error("Reap did not send a page to add your card. Please try again.");
@@ -183,12 +223,15 @@ export function GovernancePanel({
 }: {
   state: AgentStateResponse | null;
   stateError: string | null;
-  onMutate: () => void;
+  onMutate: OnMutate;
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
+  const [savedVersion, setSavedVersion] = useState<number | null>(null);
   const [mutateError, setMutateError] = useState("");
   const [mutating, setMutating] = useState(false);
   const [resolving, setResolving] = useState<Set<string>>(() => new Set());
+  // Synchronous guard: two fast clicks can both fire before React re-renders the disabled buttons.
+  const inFlight = useRef<Set<string>>(new Set());
   const [answers, setAnswers] = useState<ApprovalAnswer[]>([]);
   const [tampering, setTampering] = useState(false);
   const [tamperError, setTamperError] = useState("");
@@ -197,16 +240,18 @@ export function GovernancePanel({
     setMutateError("");
     setMutating(true);
     try {
-      await patchAgentState({ action: paused ? "revoke" : "restore" });
-      onMutate();
+      onMutate(await patchAgentState({ action: paused ? "revoke" : "restore" }));
     } catch (e) {
-      setMutateError(e instanceof Error ? e.message : "Update failed");
+      setMutateError(e instanceof Error ? e.message : "Could not change the pause setting.");
+      onMutate();
     } finally {
       setMutating(false);
     }
   }
 
   async function resolveApproval(envelopeHash: string, approved: boolean) {
+    if (inFlight.current.has(envelopeHash)) return;
+    inFlight.current.add(envelopeHash);
     setResolving((prev) => new Set(prev).add(envelopeHash));
     let answer: ApprovalAnswer;
     try {
@@ -223,7 +268,10 @@ export function GovernancePanel({
     } catch (e) {
       answer = { envelopeHash, approved, error: e instanceof Error ? e.message : "Could not save your answer." };
     }
+    // On success the card stays disabled until the next refresh removes it from the pending list,
+    // so a second click cannot send another answer. Only a failed answer can be retried.
     if (answer.error) {
+      inFlight.current.delete(envelopeHash);
       setResolving((prev) => {
         const next = new Set(prev);
         next.delete(envelopeHash);
@@ -252,6 +300,12 @@ export function GovernancePanel({
   const denied = state?.toolEvents.filter((e) => e.type === "TOOL_DENIED") ?? [];
   const paused = state?.registry.status === "revoked";
   const used = state ? Math.max(0, state.mandate.totalBudget - state.remainingBudget) : 0;
+  const pendingHashes = new Set(state?.approvals.map((a) => a.envelopeHash) ?? []);
+  const errorFor = (envelopeHash: string) =>
+    answers.find((a) => a.envelopeHash === envelopeHash && a.error)?.error;
+  // An error is shown on its card while the card is still pending; afterwards it moves to the list.
+  const shownAnswers = answers.filter((a) => !(a.error && pendingHashes.has(a.envelopeHash)));
+  const recent = state ? state.audit.slice(-ACTIVITY_LIMIT).reverse() : [];
 
   return (
     <div className="space-y-4">
@@ -263,12 +317,20 @@ export function GovernancePanel({
           in control.
         </h2>
         <p className="mt-2 text-[11px] text-muted">Reap sandbox. No real money moves.</p>
+        {state?.reapMode === "mock" && (
+          <p className="mt-2 rounded-lg border border-orange/40 bg-peach px-3 py-2 text-[11px] text-orange">
+            Offline mode: Reap is simulated with prices recorded from its sandbox, and payments the gate
+            allows complete automatically. Set REAP_MODE=live with a valid Reap key for real checkouts.
+          </p>
+        )}
         {stateError && (
           <div
             role="alert"
             className="mt-3 rounded-lg border border-orange/40 bg-peach px-3 py-2 text-[12px] text-orange"
           >
-            We could not refresh this page. The details below may be out of date.
+            {state
+              ? "Could not refresh. Showing the last details we had."
+              : "Could not load your details yet. Trying again every few seconds."}
             <details className="mt-1">
               <summary className="ac-focus-ring cursor-pointer rounded text-[11px]">
                 Technical details
@@ -281,9 +343,7 @@ export function GovernancePanel({
 
       <Section index="01" title="Payment card" tint="bg-butter/60">
         {!state ? (
-          <p className="text-[13px] text-muted">
-            {stateError ? "Details unavailable." : "Loading..."}
-          </p>
+          <Loading failed={Boolean(stateError)} />
         ) : (
           <PaymentCard enrollment={state.enrollment} onMutate={onMutate} />
         )}
@@ -291,9 +351,7 @@ export function GovernancePanel({
 
       <Section index="02" title="Spending limits" tint="bg-lavender/50">
         {!state ? (
-          <p className="text-[13px] text-muted">
-            {stateError ? "Details unavailable." : "Loading..."}
-          </p>
+          <Loading failed={Boolean(stateError)} />
         ) : (
           <div>
             <p className="ac-label text-muted">Budget left</p>
@@ -303,16 +361,16 @@ export function GovernancePanel({
                 currency: state.mandate.currency,
               })}
             </p>
-            <div className="mt-3 grid grid-cols-3 gap-3 text-[12px]">
+            <div className="mt-3 grid grid-cols-2 gap-3 text-[12px] sm:grid-cols-3">
               {(
                 [
                   ["Ask me above", state.mandate.autoThreshold],
                   ["Total budget", state.mandate.totalBudget],
                 ] as const
               ).map(([label, cents]) => (
-                <div key={label}>
+                <div key={label} className="min-w-0">
                   <p className="ac-label text-muted">{label}</p>
-                  <p className="mt-0.5 font-mono text-ink">
+                  <p className="mt-0.5 break-words font-mono text-ink">
                     {formatMoney({ amount: cents, currency: state.mandate.currency })}
                   </p>
                 </div>
@@ -358,8 +416,8 @@ export function GovernancePanel({
             </div>
 
             <p className="mt-3 text-[11px] text-muted">
-              From {new Date(state.mandate.validFrom).toLocaleDateString()} to{" "}
-              {new Date(state.mandate.validTo).toLocaleDateString()}.
+              From {new Date(state.mandate.validFrom).toLocaleString()} to{" "}
+              {new Date(state.mandate.validTo).toLocaleString()}. Version {state.mandate.version}.
             </p>
 
             <details className="mt-3 text-[12px] text-muted">
@@ -368,27 +426,27 @@ export function GovernancePanel({
               </summary>
               <dl className="mt-2 space-y-1 font-mono text-[11px] text-ink">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">Assistant ID</dt>
-                  <dd className="truncate">{state.registry.agentId}</dd>
+                  <dt className="shrink-0 text-muted">Assistant ID</dt>
+                  <dd className="min-w-0 truncate">{state.registry.agentId}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">Owner</dt>
-                  <dd className="truncate">{state.registry.owner}</dd>
+                  <dt className="shrink-0 text-muted">Owner</dt>
+                  <dd className="min-w-0 truncate">{state.registry.owner}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">AI model</dt>
-                  <dd className="truncate">{state.registry.model}</dd>
+                  <dt className="shrink-0 text-muted">AI model</dt>
+                  <dd className="min-w-0 truncate">{state.registry.model}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">Instructions ID</dt>
+                  <dt className="shrink-0 text-muted">Instructions ID</dt>
                   <dd>{shortHash(state.registry.promptHash)}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">Signing key</dt>
-                  <dd className="truncate">{state.registry.publicKeyFingerprint ?? "Not set up yet"}</dd>
+                  <dt className="shrink-0 text-muted">Signing key</dt>
+                  <dd className="min-w-0 truncate">{state.registry.publicKeyFingerprint ?? "Not set up yet"}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted">Status</dt>
+                  <dt className="shrink-0 text-muted">Status</dt>
                   <dd className={paused ? "text-red" : "text-teal"}>{paused ? "Paused" : "Ready"}</dd>
                 </div>
               </dl>
@@ -396,17 +454,25 @@ export function GovernancePanel({
 
             <button
               type="button"
-              onClick={() => setEditorOpen(true)}
+              onClick={() => {
+                setSavedVersion(null);
+                setEditorOpen(true);
+              }}
               className="ac-focus-ring mt-4 w-full rounded-xl border border-violet bg-white px-3 py-2.5 text-[13px] font-medium text-violet hover:bg-lavender"
             >
               Edit spending limits
             </button>
+            {savedVersion !== null && savedVersion === state.mandate.version && (
+              <p role="status" className="mt-1.5 text-[11px] text-teal">
+                Saved. Version {savedVersion} of your limits now applies to every new purchase.
+              </p>
+            )}
 
             <label className="mt-4 flex min-h-[44px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-line bg-white px-3 py-2">
               <span className="text-[13px] text-ink">
                 Pause assistant
                 <span className="block text-[11px] text-muted">
-                  Stop the assistant from buying anything.
+                  While paused, every purchase is refused. Browsing and prices still work.
                 </span>
               </span>
               <input
@@ -423,12 +489,13 @@ export function GovernancePanel({
                 className="relative h-6 w-11 shrink-0 rounded-full bg-line transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-violet peer-checked:bg-red peer-disabled:opacity-40 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform after:shadow peer-checked:after:translate-x-5"
               />
             </label>
-            {paused && (
-              <p className="mt-1.5 text-[11px] text-red">
-                Paused. The assistant can still browse and check prices, but every purchase is
-                refused.
-              </p>
-            )}
+            <p role="status" className={`mt-1.5 text-[11px] ${paused ? "text-red" : "text-muted"}`}>
+              {mutating
+                ? "Saving..."
+                : paused
+                  ? "Paused. The assistant cannot buy anything until you turn this off."
+                  : "On. The assistant can ask to buy within your limits."}
+            </p>
             {mutateError && (
               <p role="alert" className="mt-1.5 text-[11px] text-red">
                 {plainText(mutateError)}
@@ -439,22 +506,17 @@ export function GovernancePanel({
       </Section>
 
       <Section index="03" title="Purchase details" tint="bg-mint/50">
-        {!latest ? (
+        {!state ? (
+          <Loading failed={Boolean(stateError)} />
+        ) : !latest ? (
           <div className="flex items-center gap-3 text-muted">
             <EnvelopeOutline size={44} />
             <p className="text-[13px]">Your next purchase request will appear here.</p>
           </div>
         ) : (
           <div className="text-[13px]">
-            <p className="font-medium text-ink">
-              {latest.envelope.action.items
-                .map((i) => {
-                  const item = bySku.get(i.sku);
-                  return `${plainText(item?.name ?? i.sku)} × ${i.quantity}`;
-                })
-                .join(", ")}
-            </p>
-            <p className="mt-0.5 text-muted">
+            <p className="break-words font-medium text-ink">{itemNames(latest)}</p>
+            <p className="mt-0.5 break-words text-muted">
               {formatMoney(latest.envelope.action.amount)} at{" "}
               {latest.envelope.action.merchantDomain}
             </p>
@@ -497,27 +559,25 @@ export function GovernancePanel({
                 amount={approval.amount}
                 envelopeHash={approval.envelopeHash}
                 expiresAt={approval.expiresAt}
-                disabled={resolving.has(approval.envelopeHash)}
+                sending={resolving.has(approval.envelopeHash)}
+                error={errorFor(approval.envelopeHash)}
                 onResolve={(approved) => void resolveApproval(approval.envelopeHash, approved)}
               />
             ))}
-            {state.approvals.some((a) => resolving.has(a.envelopeHash)) && (
-              <p role="status" className="text-[11px] text-muted">
-                Sending your answer...
-              </p>
-            )}
           </div>
         )}
 
-        {answers.length > 0 && (
+        {shownAnswers.length > 0 && (
           <ul className="mb-3 space-y-2">
-            {answers.map((answer) => (
+            {shownAnswers.map((answer) => (
               <li
                 key={answer.envelopeHash}
                 className="rounded-xl border border-line bg-white px-3 py-2.5 text-[13px]"
               >
                 <p className="ac-label text-muted">
-                  You {answer.approved ? "approved" : "declined"} a request
+                  {answer.error
+                    ? "Your answer was not saved"
+                    : `You ${answer.approved ? "approved" : "declined"} a request`}
                 </p>
                 {answer.error ? (
                   <p role="alert" className="mt-1 text-red">
@@ -537,7 +597,9 @@ export function GovernancePanel({
           </ul>
         )}
 
-        {!latest ? (
+        {!state ? (
+          <Loading failed={Boolean(stateError)} />
+        ) : !latest ? (
           <div>
             <p className="text-[15px] font-medium text-ink">No requests yet.</p>
             <p className="mt-1 text-[12px] text-muted">
@@ -547,7 +609,14 @@ export function GovernancePanel({
         ) : (
           <div className="space-y-2.5">
             <p className="ac-label text-muted">Latest decision</p>
-            <DecisionBadge decision={latest.disposition.decision} />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <DecisionBadge decision={latest.disposition.decision} />
+              <RuleChips rules={latest.disposition.rulesFired} />
+            </div>
+            <p className="break-words text-[12px] text-muted">
+              {itemNames(latest)} · {formatMoney(latest.envelope.action.amount)} at{" "}
+              {latest.envelope.action.merchantDomain}
+            </p>
             <p className="text-[13px] text-ink">{plainText(latest.disposition.reason)}</p>
             <details>
               <summary className="ac-focus-ring cursor-pointer rounded">
@@ -565,8 +634,14 @@ export function GovernancePanel({
         )}
       </Section>
 
-      <Section index="05" title="Activity" tint="bg-sky/50">
-        {!state ? null : (
+      <Section index="05" title="SAFR checks" tint="bg-mint/40">
+        <PolicyChecklist entry={latest} />
+      </Section>
+
+      <Section index="06" title="Activity" tint="bg-sky/50">
+        {!state ? (
+          <Loading failed={Boolean(stateError)} />
+        ) : (
           <>
             <p>
               <span
@@ -590,28 +665,41 @@ export function GovernancePanel({
               shows up here. This is not a payment confirmation.
             </p>
             {state.audit.length === 0 ? (
-              <p className="mt-2 text-[13px] text-muted">Nothing to show yet.</p>
+              <p className="mt-2 text-[13px] text-muted">
+                Nothing to show yet. Every decision, including refusals, is listed here.
+              </p>
             ) : (
-              <ul className="mt-3 divide-y divide-line text-[12px]">
-                {state.audit.map((entry) => (
-                  <li key={entry.seq} className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2">
-                    <span className="font-mono text-muted">#{entry.seq}</span>
-                    <DecisionBadge decision={entry.disposition.decision} />
-                    <span className="min-w-0 flex-1 break-words text-ink">
-                      {formatMoney(entry.envelope.action.amount)} ·{" "}
-                      {entry.envelope.action.merchantDomain}
-                    </span>
-                    {entry.executed && (
-                      <span className="ac-label rounded-full border border-blue/30 bg-white px-2 py-0.5 text-blue">
-                        Sent to Reap
-                      </span>
-                    )}
-                    <span className="text-muted">
-                      {new Date(entry.ts).toLocaleTimeString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <p className="ac-label mt-3 text-muted">
+                  {state.audit.length > ACTIVITY_LIMIT
+                    ? `Newest first · latest ${ACTIVITY_LIMIT} of ${state.audit.length}`
+                    : "Newest first"}
+                </p>
+                <ul className="mt-1 divide-y divide-line text-[12px]">
+                  {recent.map((entry, i) => (
+                    <li key={entry.seq} className={`space-y-1 py-2.5 ${i === 0 ? "ac-reveal" : ""}`}>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-mono text-muted">#{entry.seq}</span>
+                        <DecisionBadge decision={entry.disposition.decision} />
+                        {entry.executed && (
+                          <span className="ac-label rounded-full border border-blue/30 bg-white px-2 py-0.5 text-blue">
+                            Sent to Reap
+                          </span>
+                        )}
+                        <span className="ml-auto font-mono text-[11px] text-muted">
+                          {new Date(entry.ts).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <p className="break-words text-ink">
+                        <span className="font-mono">{formatMoney(entry.envelope.action.amount)}</span> at{" "}
+                        {entry.envelope.action.merchantDomain}
+                        <span className="text-muted"> · {itemNames(entry)}</span>
+                      </p>
+                      <RuleChips rules={entry.disposition.rulesFired} />
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
             {DEV && state.audit.length > 0 && (
               <div className="mt-3 border-t border-line pt-3">
@@ -680,9 +768,10 @@ export function GovernancePanel({
           mandate={state.mandate}
           open={editorOpen}
           onClose={() => setEditorOpen(false)}
-          onSaved={() => {
+          onSaved={(fresh) => {
             setEditorOpen(false);
-            onMutate();
+            setSavedVersion(fresh.mandate.version);
+            onMutate(fresh);
           }}
         />
       )}

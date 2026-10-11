@@ -5,6 +5,7 @@
 import type { Currency, Disposition, Envelope, Mandate, Money } from "../types";
 import type { SignatureCheck } from "./envelope";
 import type { AgentRecord } from "./registry";
+import { minutesText, VELOCITY_WINDOW_MS } from "./windows";
 
 export type IdentityContext = {
   envelope: Envelope;
@@ -105,7 +106,7 @@ export function dispose(ctx: TrustedContext): Disposition {
     return {
       decision: "OBSERVE",
       rulesFired,
-      reason: `${formatMoney(amount)} is within the mandate, but it is a repeat purchase from ${action.merchantDomain} within 5 minutes, so it goes ahead flagged for review.`,
+      reason: `${formatMoney(amount)} is within the mandate, but it is a repeat purchase from ${action.merchantDomain} within ${minutesText(VELOCITY_WINDOW_MS)}, so it goes ahead flagged for review.`,
     };
   return {
     decision: "AUTO_EXECUTE",

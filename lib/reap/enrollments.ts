@@ -1,11 +1,17 @@
 // The card the agent pays with. Added from the app ("Add card") or `npm run enroll`: we create an
 // EXTERNAL enrollment, the user types the card on Reap's hosted page (we never see card details),
 // and Reap marks the enrollment ACTIVE. We keep only Reap's enrollment id and status, in SQLite.
+// REAP_MODE=mock: no Reap calls. "Add card" stores an ACTIVE enrollment at once (no hosted page),
+// and with no card stored or configured the gate charges MOCK_ENROLLMENT_ID.
 
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { db } from "../safr/db";
 import { reapFetch } from "./client";
+
+export const MOCK_ENROLLMENT_ID = "mock-enrollment";
+
+const mockMode = () => env.REAP_MODE === "mock";
 
 export type EnrollmentStatus = "REQUIRES_ACTION" | "ACTIVE" | "FAILED" | "EXPIRED" | "REVOKED";
 export type Enrollment = { id: string; status: EnrollmentStatus; url?: string; updatedAt: string };
@@ -32,16 +38,20 @@ function save(e: { id: string; status: EnrollmentStatus; url?: string }, ownerId
     .run(e.id, ownerId, e.status, e.url ?? null, now, now);
 }
 
-// The card to show: the newest ACTIVE enrollment, else the most recent one of any status. No Reap call.
+// The card to show: the newest ACTIVE enrollment, else the newest one of any status. No Reap call.
+// "Newest" is by creation, not updated_at: refreshPendingEnrollments re-stamps every pending row
+// in whatever order Reap answers, which would otherwise flip "Start again" back to an older,
+// already-used single-use card link.
 export function currentEnrollment(): Enrollment | null {
   const row = db()
-    .prepare(`SELECT * FROM reap_enrollments ORDER BY (status = 'ACTIVE') DESC, updated_at DESC LIMIT 1`)
+    .prepare(`SELECT * FROM reap_enrollments ORDER BY (status = 'ACTIVE') DESC, created_at DESC, rowid DESC LIMIT 1`)
     .get() as Row | undefined;
   return row ? toEnrollment(row) : null;
 }
 
 // Re-check every enrollment still waiting for card details (Reap can take a while to mark one ACTIVE).
 export async function refreshPendingEnrollments(): Promise<void> {
+  if (mockMode()) return; // nothing to ask Reap; mock enrollments are ACTIVE from the start
   const rows = db().prepare(`SELECT id, owner_id FROM reap_enrollments WHERE status = 'REQUIRES_ACTION'`).all() as {
     id: string;
     owner_id: string;
@@ -55,15 +65,21 @@ export async function refreshPendingEnrollments(): Promise<void> {
   );
 }
 
-// What the gate charges: the newest ACTIVE enrollment from the app, else REAP_ENROLLMENT_ID.
+// What the gate charges: the newest ACTIVE enrollment from the app, else REAP_ENROLLMENT_ID
+// (else, in mock mode, MOCK_ENROLLMENT_ID).
 export function activeEnrollmentId(): string | undefined {
-  const row = db().prepare(`SELECT id FROM reap_enrollments WHERE status = 'ACTIVE' ORDER BY updated_at DESC LIMIT 1`).get() as
-    | { id: string }
-    | undefined;
-  return row?.id ?? env.REAP_ENROLLMENT_ID;
+  const row = db()
+    .prepare(`SELECT id FROM reap_enrollments WHERE status = 'ACTIVE' ORDER BY created_at DESC, rowid DESC LIMIT 1`)
+    .get() as { id: string } | undefined;
+  return row?.id ?? env.REAP_ENROLLMENT_ID ?? (mockMode() ? MOCK_ENROLLMENT_ID : undefined);
 }
 
 export async function createEnrollment(input: { ownerId: string; email: string; returnUrl: string }): Promise<Enrollment> {
+  if (mockMode()) {
+    const id = `${MOCK_ENROLLMENT_ID}-${crypto.randomUUID().slice(0, 8)}`;
+    save({ id, status: "ACTIVE" }, input.ownerId);
+    return storedEnrollment(id);
+  }
   if (new URL(input.returnUrl).protocol !== "https:") {
     throw new Error(`Enrollment returnUrl must be HTTPS (got ${input.returnUrl}); use npm run dev:https`);
   }
@@ -78,15 +94,24 @@ export async function createEnrollment(input: { ownerId: string; email: string; 
   });
   const e = EnrollmentResponseSchema.parse(raw);
   save({ id: e.id, status: e.status, url: e.nextAction?.url }, input.ownerId);
-  return currentEnrollment()!;
+  // The one just created (with its card page), not currentEnrollment(), which prefers an ACTIVE card.
+  return storedEnrollment(e.id);
+}
+
+function storedEnrollment(id: string): Enrollment {
+  return toEnrollment(db().prepare(`SELECT * FROM reap_enrollments WHERE id = ?`).get(id) as Row);
 }
 
 // Re-reads one enrollment from Reap and stores its status.
 export async function refreshEnrollment(id: string, ownerId: string): Promise<Enrollment> {
+  if (mockMode()) {
+    const row = db().prepare(`SELECT id FROM reap_enrollments WHERE id = ?`).get(id);
+    if (!row) throw new Error(`Enrollment ${id} is not stored (REAP_MODE=mock does not call Reap)`);
+    return storedEnrollment(id);
+  }
   const e = EnrollmentResponseSchema.parse(await reapFetch(`/agentic/enrollments/${encodeURIComponent(id)}`));
   save({ id: e.id, status: e.status, url: e.nextAction?.url }, ownerId);
-  const row = db().prepare(`SELECT * FROM reap_enrollments WHERE id = ?`).get(id) as Row;
-  return toEnrollment(row);
+  return storedEnrollment(e.id);
 }
 
 // Record an enrollment created elsewhere (e.g. REAP_ENROLLMENT_ID from .env.local or the CLI).

@@ -4,7 +4,7 @@
 import type { CatalogItem, Quote } from "@/lib/types";
 import { openInMemoryDb } from "@/lib/safr/db";
 import { generateAgentKeyPair } from "@/lib/safr/envelope";
-import { CATALOG, createGate, DEMO_SHIPPING_ADDRESS } from "@/lib/safr/gate";
+import { CATALOG, createGate, DEMO_SHIPPING_ADDRESS, type GateDeps } from "@/lib/safr/gate";
 import { createMockReap } from "@/lib/safr/mock-reap";
 import { getAgent, registerPublicKey } from "@/lib/safr/registry";
 
@@ -33,7 +33,7 @@ export function fakeQuote(sku: string, overrides: Partial<Quote> = {}, now = STA
   };
 }
 
-export function setup(opts: { privateKey?: string | null } = {}) {
+export function setup(opts: { privateKey?: string | null; gate?: Partial<Omit<GateDeps, "reap" | "now">> } = {}) {
   openInMemoryDb();
   const keys = generateAgentKeyPair();
   registerPublicKey(AGENT_ID, keys.publicKey);
@@ -47,6 +47,8 @@ export function setup(opts: { privateKey?: string | null } = {}) {
     enrollmentId: () => "enr_test",
     appBaseUrl: () => "http://localhost:3000",
     email: () => "demo@agentcart.test",
+    simulateWithoutCard: () => false,
+    ...opts.gate,
   });
   // What C's getQuote tool does: quote one catalog item through the adapter.
   const quote = (sku: string, quantity = 1) =>

@@ -10,6 +10,7 @@ export type { Enrollment, PendingApproval, ToolEvent };
 
 export type AgentStateResponse = {
   mode: "live";
+  reapMode: "live" | "mock"; // mock = Reap offline mode: recorded sandbox prices, checkouts complete in-process
   mandate: Mandate;
   remainingBudget: number;
   registry: {

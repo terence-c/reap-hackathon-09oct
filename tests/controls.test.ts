@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   getReservation,
   loadMandate,
+  MandateSchema,
   recentPurchaseCount,
   releaseReservation,
   remainingBudget,
   reserve,
   saveMandate,
   settle,
+  VELOCITY_WINDOW_MS,
 } from "@/lib/safr/controls";
-import { openInMemoryDb } from "@/lib/safr/db";
+import { db, openInMemoryDb } from "@/lib/safr/db";
 import { MINUTE, START } from "./helpers";
 
 const SGD = (amount: number) => ({ amount, currency: "SGD" as const });
@@ -34,6 +36,23 @@ describe("controls repository", () => {
     expect(saved.version).toBe(2);
     expect(loadMandate()).toMatchObject({ version: 2, killSwitch: true });
     expect(() => saveMandate({ ...loadMandate(), totalBudget: 12.5 })).toThrow();
+  });
+
+  it("saveMandate enforces autoThreshold ≤ totalBudget and validFrom < validTo", () => {
+    const current = loadMandate();
+    expect(() => saveMandate({ ...current, totalBudget: 5000, autoThreshold: 8000 })).toThrow(/autoThreshold must be at or below totalBudget/);
+    expect(() => saveMandate({ ...current, validTo: current.validFrom })).toThrow(/validFrom must be before validTo/);
+    expect(() => saveMandate({ ...current, validFrom: "2026-12-01T00:00:00Z", validTo: "2026-11-01T00:00:00Z" })).toThrow(
+      /validFrom must be before validTo/,
+    );
+    expect(loadMandate().version).toBe(1); // nothing saved
+    expect(saveMandate({ ...current, autoThreshold: current.totalBudget }).autoThreshold).toBe(current.totalBudget); // equal is fine
+  });
+
+  it("loadMandate still reads a row saved before the cross-field rules existed", () => {
+    db().prepare(`UPDATE mandates SET json = ?`).run(JSON.stringify({ ...loadMandate(), totalBudget: 5000, autoThreshold: 8000 }));
+    expect(loadMandate()).toMatchObject({ totalBudget: 5000, autoThreshold: 8000 });
+    expect(MandateSchema.safeParse(loadMandate()).success).toBe(false);
   });
 
   it("remaining budget counts reserved and settled, not released", () => {
@@ -63,12 +82,16 @@ describe("controls repository", () => {
     expect(remainingBudget("mandate-001")).toBe(15000 - 1579);
   });
 
-  it("velocity counts same-merchant purchases inside the 5-minute window only", () => {
+  it("velocity counts same-merchant purchases inside the 15-minute window only", () => {
+    expect(VELOCITY_WINDOW_MS).toBe(15 * MINUTE);
     reserve("h1", { mandateId: "mandate-001", merchantDomain: "popular.com.sg", amount: SGD(1579) }, START);
-    expect(recentPurchaseCount("popular.com.sg", 5 * MINUTE, START + 4 * MINUTE)).toBe(1);
-    expect(recentPurchaseCount("popular.com.sg", 5 * MINUTE, START + 6 * MINUTE)).toBe(0);
-    expect(recentPurchaseCount("ergotune.com", 5 * MINUTE, START + MINUTE)).toBe(0);
+    // Default window and clock arguments: the constant is what the gate uses.
+    expect(recentPurchaseCount("popular.com.sg", undefined, START + 14 * MINUTE)).toBe(1);
+    expect(recentPurchaseCount("popular.com.sg", undefined, START + 15 * MINUTE - 1)).toBe(1);
+    expect(recentPurchaseCount("popular.com.sg", undefined, START + 15 * MINUTE)).toBe(0); // strict: created_at > now − window
+    expect(recentPurchaseCount("popular.com.sg", undefined, START + 16 * MINUTE)).toBe(0);
+    expect(recentPurchaseCount("ergotune.com", undefined, START + MINUTE)).toBe(0);
     releaseReservation("h1");
-    expect(recentPurchaseCount("popular.com.sg", 5 * MINUTE, START + MINUTE)).toBe(0);
+    expect(recentPurchaseCount("popular.com.sg", undefined, START + MINUTE)).toBe(0);
   });
 });

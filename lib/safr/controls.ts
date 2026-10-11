@@ -6,10 +6,13 @@
 import { z } from "zod";
 import type { Mandate, Money } from "../types";
 import { db } from "./db";
+import { VELOCITY_WINDOW_MS } from "./windows";
 
-export const VELOCITY_WINDOW_MS = 5 * 60 * 1000;
+// 15 minutes; defined in ./windows so the Disposition Engine can word its reason from it.
+export { VELOCITY_WINDOW_MS };
 
-export const MandateSchema = z.object({
+// Field shapes only. Use MandateSchema (fields + cross-field rules) to validate anything new.
+export const MandateFieldsSchema = z.object({
   id: z.string().min(1),
   version: z.number().int().positive(),
   principalId: z.string().min(1),
@@ -23,12 +26,28 @@ export const MandateSchema = z.object({
   killSwitch: z.boolean(),
 });
 
+type MandateRuleFields = Pick<Mandate, "totalBudget" | "autoThreshold" | "validFrom" | "validTo">;
+
+// The cross-field rules, worded exactly like lane C's PATCH /api/agent/state so both say the same.
+export function withMandateRules<T extends z.ZodType<MandateRuleFields>>(schema: T): z.ZodEffects<T, z.output<T>, z.input<T>> {
+  return schema.superRefine((m, ctx) => {
+    if (m.autoThreshold > m.totalBudget)
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["autoThreshold"], message: "autoThreshold must be at or below totalBudget" });
+    if (Date.parse(m.validFrom) >= Date.parse(m.validTo))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["validTo"], message: "validFrom must be before validTo" });
+  }) as z.ZodEffects<T, z.output<T>, z.input<T>>;
+}
+
+export const MandateSchema = withMandateRules(MandateFieldsSchema);
+
+// Reads with the field shapes only: a mandate saved before the cross-field rules existed still
+// loads (the gate stays safe either way: the hard cap and validity window still apply).
 export function loadMandate(): Mandate {
   const row = db().prepare(`SELECT json FROM mandates ORDER BY updated_at DESC LIMIT 1`).get() as
     | { json: string }
     | undefined;
   if (!row) throw new Error("No mandate configured");
-  return MandateSchema.parse(JSON.parse(row.json));
+  return MandateFieldsSchema.parse(JSON.parse(row.json));
 }
 
 // Validates, bumps version, persists. `version` in the input is ignored.

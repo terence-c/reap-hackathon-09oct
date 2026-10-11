@@ -12,13 +12,17 @@ import { committed, loadMandate, saveMandate } from "@/lib/safr/controls";
 import { gate } from "@/lib/safr/gate";
 import { getAgent, listToolEvents, setAgentStatus } from "@/lib/safr/registry";
 import { currentEnrollment } from "@/lib/reap/enrollments";
+import { reapMode } from "@/lib/reap";
 
 function liveState(): AgentStateResponse {
+  // Expire timed-out approvals first so the budget figures don't count their released holds.
+  gate.expireStaleApprovals();
   const mandate = loadMandate();
   const { reserved, settled } = committed(mandate.id);
   const agent = getAgent(env.AGENT_ID);
   return {
     mode: "live",
+    reapMode: reapMode(),
     mandate,
     remainingBudget: mandate.totalBudget - reserved - settled,
     registry: agent
@@ -104,6 +108,7 @@ export async function PATCH(request: NextRequest) {
       const { version, ...current } = loadMandate();
       saveMandate({ ...current, ...parsed.data.mandate });
     } else {
+      if (!getAgent(env.AGENT_ID)) return jsonError(409, "The assistant is not registered. Run npm run keygen.");
       setAgentStatus(env.AGENT_ID, parsed.data.action === "revoke" ? "REVOKED" : "ACTIVE");
     }
   } catch (error) {

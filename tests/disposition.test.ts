@@ -92,9 +92,10 @@ describe("demo script decisions", () => {
     expect(d.reason).toContain("Drinks & Alcohol");
   });
 
-  it("book again within 5 min → OBSERVE VELOCITY", () => {
+  it("book again within the 15-minute velocity window → OBSERVE VELOCITY", () => {
     const d = dispose(ctx("popular-ghost-stories-12", { recentPurchaseCount: 1, remainingBudget: 4421 }));
     expect(d).toMatchObject({ decision: "OBSERVE", rulesFired: ["VELOCITY"] });
+    expect(d.reason).toContain("within 15 minutes");
   });
 });
 
@@ -153,8 +154,11 @@ describe("controls", () => {
   });
 
   it("outside the mandate's validity window → DENY MANDATE_EXPIRED", () => {
-    const d = dispose(ctx("popular-ghost-stories-12", { now: Date.parse("2026-10-11T00:00:01+08:00") }));
-    expect(d.rulesFired).toEqual(["MANDATE_EXPIRED"]);
+    // Derived from the demo mandate, so it holds whatever validity window the demo uses.
+    const after = dispose(ctx("popular-ghost-stories-12", { now: Date.parse(mandate.validTo) + 1000 }));
+    expect(after.rulesFired).toEqual(["MANDATE_EXPIRED"]);
+    const before = dispose(ctx("popular-ghost-stories-12", { now: Date.parse(mandate.validFrom) - 1000 }));
+    expect(before.rulesFired).toEqual(["MANDATE_EXPIRED"]);
   });
 
   it("expired quote → DENY QUOTE_EXPIRED", () => {

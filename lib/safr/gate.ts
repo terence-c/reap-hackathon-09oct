@@ -34,7 +34,6 @@ import {
   remainingBudget,
   reserve,
   settle,
-  VELOCITY_WINDOW_MS,
 } from "./controls";
 import { db } from "./db";
 import { checkIdentity, dispose, formatMoney } from "./disposition";
@@ -43,8 +42,9 @@ import { getAgent, toolTraceFor, type AgentRecord } from "./registry";
 import { activeEnrollmentId } from "../reap/enrollments";
 import { DEMO_SHIPPING_ADDRESS } from "../reap/quotes";
 import { reapAdapter } from "./reap-adapter";
+import { APPROVAL_WINDOW_MS, minutesText, VELOCITY_WINDOW_MS } from "./windows";
 
-export const APPROVAL_WINDOW_MS = 5 * 60 * 1000;
+export { APPROVAL_WINDOW_MS };
 export const SIMULATED_PREFIX = "sim_";
 
 const CatalogSchema = z.array(
@@ -213,6 +213,15 @@ export function createGate(deps: GateDeps): SafrGate {
         idempotencyKey: envelope.hash,
       });
       audit.markExecuted(seq, checkout.id);
+      if (checkout.status === "FAILED" || checkout.status === "EXPIRED") {
+        releaseReservation(envelope.hash, now());
+        return {
+          decision: disposition.decision,
+          message: `${disposition.reason} But Reap reported the checkout as ${checkout.status.toLowerCase()}, so nothing was charged.`,
+          checkoutId: checkout.id,
+          envelopeHash: envelope.hash,
+        };
+      }
       const next = checkout.nextAction
         ? "Awaiting your approval on Reap's page."
         : "Checkout sent to Reap; waiting for it to confirm.";
@@ -268,7 +277,7 @@ export function createGate(deps: GateDeps): SafrGate {
         disposition: {
           decision: "DENY",
           rulesFired: ["APPROVAL_TIMEOUT"],
-          reason: "No one approved this within 5 minutes, so it was cancelled and the budget hold released.",
+          reason: `No one approved this within ${minutesText(APPROVAL_WINDOW_MS)}, so it was cancelled and the budget hold released.`,
         },
         now: t,
       });
@@ -314,7 +323,7 @@ export function createGate(deps: GateDeps): SafrGate {
         .run(envelope.hash, entry.seq, input.sessionId, t, t + APPROVAL_WINDOW_MS);
       return {
         decision: "ESCALATE",
-        message: `${disposition.reason} Waiting for approval in the SAFR panel (expires in 5 minutes).`,
+        message: `${disposition.reason} Waiting for approval in the SAFR panel (expires in ${minutesText(APPROVAL_WINDOW_MS)}).`,
         envelopeHash: envelope.hash,
       };
     }
@@ -342,13 +351,22 @@ export function createGate(deps: GateDeps): SafrGate {
     let envelope = original;
     let agent = getAgent(agentId);
     try {
-      let quote = await deps.reap.getQuote(original.action.quoteId);
-      const quoteExpired = t >= Date.parse(quote.expiresAt);
-      if (quoteExpired) {
+      // Re-read the quote. If it has expired, or Reap no longer serves it, quote the same item again.
+      let quote = await deps.reap.getQuote(original.action.quoteId).catch((err: unknown) => {
+        console.warn(`[safr] approve: quote ${original.action.quoteId} unreadable, re-quoting: ${err instanceof Error ? err.message : err}`);
+        return null;
+      });
+      if (!quote || t >= Date.parse(quote.expiresAt)) {
         if (!item) throw new Error("item is not in the catalog");
         quote = await deps.reap.createQuote({ item, quantity: original.action.items[0].quantity, email: email(), shippingAddress });
       }
-      if (quoteExpired || mandate.version !== original.context.mandateVersion) {
+      // Rebuild whenever the trusted inputs moved: a new or re-priced quote, or an edited mandate.
+      const quoteMoved =
+        quote.id !== original.action.quoteId ||
+        quote.merchantDomain !== original.action.merchantDomain ||
+        canonicalize(quote.finalAmount) !== canonicalize(original.action.amount) ||
+        Date.parse(quote.expiresAt) !== Date.parse(original.context.quoteExpiresAt);
+      if (quoteMoved || mandate.version !== original.context.mandateVersion) {
         ({ envelope, agent } = sealEnvelope(quote, mandate, original.sessionId, original.context.toolTrace, original.context.agentReason));
       }
     } catch (err) {
@@ -366,12 +384,18 @@ export function createGate(deps: GateDeps): SafrGate {
       canonicalize(envelope.action.items) !== canonicalize(original.action.items) ||
       envelope.action.amount.currency !== original.action.amount.currency ||
       envelope.action.amount.amount > original.action.amount.amount;
-    if (changed)
+    if (changed) {
+      const pricier =
+        envelope.action.amount.currency === original.action.amount.currency &&
+        envelope.action.amount.amount > original.action.amount.amount;
       return denyAndRelease(envelope, {
         decision: "DENY",
         rulesFired: ["QUOTE_CHANGED"],
-        reason: `The refreshed quote is ${formatMoney(envelope.action.amount)}, more than the ${formatMoney(original.action.amount)} that was approved, so nothing was bought. Propose it again.`,
+        reason: pricier
+          ? `The refreshed quote is ${formatMoney(envelope.action.amount)}, more than the ${formatMoney(original.action.amount)} that was approved, so nothing was bought. Propose it again.`
+          : `The refreshed quote (${formatMoney(envelope.action.amount)} at ${envelope.action.merchantDomain}) no longer matches the ${formatMoney(original.action.amount)} at ${original.action.merchantDomain} that was approved, so nothing was bought. Propose it again.`,
       });
+    }
 
     // Human approval overrides only the auto-approve threshold; every other rule still applies.
     const recheck = decide(envelope, agent, item, mandate, t, envelopeHash);

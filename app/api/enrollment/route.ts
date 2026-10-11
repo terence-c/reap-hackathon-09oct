@@ -1,7 +1,8 @@
 // GET  → the current card enrollment ({ enrollment: {id,status,url?,updatedAt} | null }); a pending one
 //        is refreshed from Reap so the page can watch it turn ACTIVE.
 // POST → starts a new EXTERNAL enrollment and returns Reap's hosted card-entry url. Card details are
-//        typed on Reap's page only; AgentCart never sees or stores them.
+//        typed on Reap's page only; AgentCart never sees or stores them. With REAP_MODE=mock it
+//        returns an ACTIVE enrollment straight away, with no url (there is no hosted page).
 
 import { connection, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
@@ -26,7 +27,8 @@ export async function POST(request: NextRequest) {
       email: env.DEMO_EMAIL,
       returnUrl: `${env.APP_BASE_URL}/orders/enrollment-done`,
     });
-    if (!enrollment.url) return Response.json({ error: "Reap did not return a card page." }, { status: 502 });
+    if (!enrollment.url && enrollment.status !== "ACTIVE")
+      return Response.json({ error: "Reap did not return a card page." }, { status: 502 });
     return Response.json({ enrollment }, { headers: noStore });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not start adding a card.";

@@ -9,6 +9,7 @@
 import type { AuditEntry, Disposition, Envelope } from "../types";
 import { db } from "./db";
 import { canonicalize, sha256 } from "./envelope";
+import { checksFromRules } from "./policies";
 
 export const GENESIS_HASH = "0".repeat(64);
 
@@ -20,11 +21,22 @@ type AuditRow = {
   decision: Disposition["decision"];
   rules_json: string;
   reason: string;
+  checks_json: string | null;
   executed: number;
   checkout_id: string | null;
   prev_hash: string;
   hash: string;
 };
+
+// Rebuild the stored disposition exactly as it was hashed (checks only when they were stored).
+function dispositionOf(row: AuditRow): Disposition {
+  return {
+    decision: row.decision,
+    rulesFired: JSON.parse(row.rules_json),
+    reason: row.reason,
+    ...(row.checks_json ? { checks: JSON.parse(row.checks_json) } : {}),
+  };
+}
 
 function entryHash(prevHash: string, seq: number, ts: string, envelope: unknown, disposition: Disposition): string {
   return sha256(prevHash + canonicalize({ seq, ts, envelope, disposition }));
@@ -35,7 +47,7 @@ function toEntry(row: AuditRow): AuditEntry {
     seq: row.seq,
     ts: row.ts,
     envelope: JSON.parse(row.envelope_json),
-    disposition: { decision: row.decision, rulesFired: JSON.parse(row.rules_json), reason: row.reason },
+    disposition: dispositionOf(row),
     executed: row.executed === 1,
     ...(row.checkout_id ? { checkoutId: row.checkout_id } : {}),
     prevHash: row.prev_hash,
@@ -56,14 +68,15 @@ export function append(input: { envelope: Envelope; disposition: Disposition; no
       decision: input.disposition.decision,
       rulesFired: [...input.disposition.rulesFired],
       reason: input.disposition.reason,
+      checks: input.disposition.checks ?? checksFromRules(input.disposition.decision, input.disposition.rulesFired),
     };
     const hash = entryHash(prevHash, seq, ts, input.envelope, disposition);
     database
       .prepare(
-        `INSERT INTO audit (seq, ts, envelope_hash, envelope_json, decision, rules_json, reason, executed, checkout_id, prev_hash, hash)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)`,
+        `INSERT INTO audit (seq, ts, envelope_hash, envelope_json, decision, rules_json, reason, checks_json, executed, checkout_id, prev_hash, hash)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)`,
       )
-      .run(seq, ts, input.envelope.hash, JSON.stringify(input.envelope), disposition.decision, JSON.stringify(disposition.rulesFired), disposition.reason, prevHash, hash);
+      .run(seq, ts, input.envelope.hash, JSON.stringify(input.envelope), disposition.decision, JSON.stringify(disposition.rulesFired), disposition.reason, JSON.stringify(disposition.checks), prevHash, hash);
     return seq;
   });
   return get(insert())!;
@@ -105,7 +118,7 @@ export function verifyChain(): ChainCheck {
   for (const row of rows) {
     let recomputed: string;
     try {
-      const disposition: Disposition = { decision: row.decision, rulesFired: JSON.parse(row.rules_json), reason: row.reason };
+      const disposition = dispositionOf(row);
       recomputed = entryHash(prevHash, row.seq, row.ts, JSON.parse(row.envelope_json), disposition);
     } catch {
       return { ok: false, length: rows.length, brokenAtSeq: row.seq };

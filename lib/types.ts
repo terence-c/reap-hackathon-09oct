@@ -2,6 +2,8 @@
 // Change it only at a sync point, and tell the other two lanes.
 // Money is ALWAYS integer minor units (cents). Never floats.
 
+import type { PolicyCheck } from "./safr/policies";
+
 export type Currency = "SGD" | "USD";
 
 export type Money = { amount: number; currency: Currency };
@@ -81,6 +83,9 @@ export type Disposition = {
   decision: Decision;
   rulesFired: string[];
   reason: string; // one plain sentence the agent can show the user
+  // Every SAFR policy and how it came out (lib/safr/policies.ts). Filled in by the audit log;
+  // part of the hashed record. Absent on rows written before checks were stored.
+  checks?: PolicyCheck[];
 };
 
 export type AuditEntry = {

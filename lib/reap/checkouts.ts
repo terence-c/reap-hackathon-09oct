@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Checkout } from "@/lib/types";
 import { env } from "@/lib/env";
-import { reapFetch } from "./client";
+import { isSandboxBaseUrl, reapFetch } from "./client";
 import { ReapMoneySchema } from "./money";
 
 const CheckoutResponseSchema = z.object({
@@ -45,7 +45,7 @@ export async function createCheckout(input: {
       presentation: { type: "REDIRECT", returnUrl: input.returnUrl },
     },
     idempotencyKey: input.idempotencyKey,
-    simulateCheckout: env.REAP_SIMULATE_CHECKOUT && env.REAP_BASE_URL.includes("sandbox"),
+    simulateCheckout: env.REAP_SIMULATE_CHECKOUT && isSandboxBaseUrl(env.REAP_BASE_URL),
   });
   return toCheckout(raw);
 }

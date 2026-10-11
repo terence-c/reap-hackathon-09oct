@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart } from "ai";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import catalogJson from "@/lib/catalog.json";
 import type { CatalogItem } from "@/lib/types";
 import { fetchAgentState, type AgentStateResponse } from "@/lib/agent/state-client";
@@ -21,7 +21,8 @@ const QUICK_PROMPTS: {
   label: string;
   tile: string;
 }[] = [
-  // The demo script, in order: allowed, needs approval, over budget, wrong currency, wrong category, repeat.
+  // The demo script, in order: allowed, needs approval, over budget, wrong currency (USD),
+  // wrong category, and the same book again within 15 minutes (repeat purchase).
   { icon: "book", prompt: "Buy the True Singapore Ghost Stories Book 12", sku: "popular-ghost-stories-12", label: "Ghost Stories, Book 12", tile: "bg-lavender text-violet" },
   { icon: "tag", prompt: "Buy the Wabisabi Luggage Tag", sku: "byndartisan-luggage-tag", label: "Wabisabi luggage tag", tile: "bg-peach text-orange" },
   { icon: "table", prompt: "Buy the Geometry 12 Custom Table", sku: "picketandrail-geometry-table", label: "Geometry custom table", tile: "bg-mint text-teal" },
@@ -40,14 +41,32 @@ export function Workspace() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  async function refreshState() {
-    try {
-      setState(await fetchAgentState());
+  // Every refresh gets a number. A slow response that started before a newer one (say, a 2s poll
+  // that was in flight when the spending limits were saved) is dropped instead of overwriting it.
+  const issued = useRef(0);
+  const applied = useRef(0);
+
+  const refreshState = useCallback(async (fresh?: AgentStateResponse) => {
+    const seq = ++issued.current;
+    const apply = (next: AgentStateResponse) => {
+      if (seq < applied.current) return;
+      applied.current = seq;
+      setState(next);
       setStateError(null);
-    } catch (e) {
-      setStateError(e instanceof Error ? e.message : "state refresh failed");
+    };
+    if (fresh) {
+      apply(fresh);
+      return;
     }
-  }
+    try {
+      apply(await fetchAgentState());
+    } catch (e) {
+      // Keep the last good details on screen; the panel shows a small "could not refresh" note.
+      if (seq >= applied.current) {
+        setStateError(e instanceof Error ? e.message : "Could not refresh details.");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const first = setTimeout(() => void refreshState(), 0);
@@ -56,7 +75,7 @@ export function Workspace() {
       clearTimeout(first);
       clearInterval(timer);
     };
-  }, []);
+  }, [refreshState]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -116,7 +135,7 @@ export function Workspace() {
               Reap sandbox. No real money moves.
             </p>
           </div>
-          <ol className="flex items-center gap-0 text-[12px]" aria-label="How it works">
+          <ol className="flex flex-wrap items-center gap-y-2 text-[12px]" aria-label="How it works">
             {["Find items", "Check price", "Ask permission"].map((step, i) => (
               <li key={step} className="flex items-center">
                 {i > 0 && <Icon name="arrow" size={13} className="mx-2 text-muted" />}

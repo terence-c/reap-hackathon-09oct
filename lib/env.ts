@@ -21,6 +21,11 @@ const appSchema = z.object({
   // Demo safety net: with no ACTIVE Reap card, cleared purchases finish as a clearly labeled
   // simulated checkout instead of failing. Real Reap checkouts are used whenever a card is active.
   DEMO_SIMULATE_WITHOUT_CARD: z.preprocess(blank, z.enum(["true", "false"]).default("false")),
+  // "mock" runs the demo offline: lib/reap serves recorded sandbox prices and completes checkouts
+  // in-process, with no Reap calls, so REAP_API_KEY may be empty or revoked. "live" calls Reap.
+  REAP_MODE: z.preprocess(blank, z.enum(["live", "mock"]).default("live")),
+  // Eager (not in the REAP_* group) so mock mode can read it without REAP_API_KEY.
+  REAP_ENROLLMENT_ID: optional,
   // Eager (with defaults) so the registry can read OPENAI_MODEL at startup without the key.
   OPENAI_BASE_URL: urlWithDefault("https://api.openai.com/v1"),
   OPENAI_MODEL: withDefault("gpt-6-luna"),
@@ -30,7 +35,6 @@ const reapSchema = z.object({
   REAP_API_KEY: required,
   REAP_BASE_URL: urlWithDefault("https://sg.sandbox.api.reap.global"),
   REAP_API_VERSION: withDefault("2025-02-14"),
-  REAP_ENROLLMENT_ID: optional,
   // Sandbox only: send X-Simulate-Checkout: COMPLETED so checkouts complete without the hosted approval step.
   REAP_SIMULATE_CHECKOUT: z.preprocess(blank, z.enum(["true", "false"]).default("true")),
 });
@@ -68,9 +72,6 @@ export const env = {
   },
   get REAP_API_VERSION(): string {
     return reap().REAP_API_VERSION;
-  },
-  get REAP_ENROLLMENT_ID(): string | undefined {
-    return reap().REAP_ENROLLMENT_ID;
   },
   get REAP_SIMULATE_CHECKOUT(): boolean {
     return reap().REAP_SIMULATE_CHECKOUT === "true";

@@ -11,6 +11,7 @@ import type { CatalogItem } from "@/lib/types";
 
 // env validates the REAP_* group on first access and caches it, so set it before anything runs.
 vi.hoisted(() => {
+  process.env.REAP_MODE = "live"; // these tests exercise the live adapter (fetch is stubbed)
   process.env.REAP_API_KEY = "test";
   process.env.REAP_BASE_URL = "https://sg.sandbox.api.reap.global";
   process.env.REAP_API_VERSION = "2025-02-14";

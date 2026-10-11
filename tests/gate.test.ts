@@ -59,7 +59,7 @@ describe("demo script, in order", () => {
     expect(audit.latestForEnvelope(beer.envelopeHash)!.disposition.rulesFired).toEqual(["CATEGORY_OUT_OF_SCOPE"]);
     expect(reap.checkoutsCreated()).toBe(2); // no Reap call for any DENY
 
-    // 6. book again within 5 min → OBSERVE, still executes
+    // 6. book again within the 15-minute velocity window → OBSERVE, still executes
     clock.advance(MINUTE);
     const again = await propose("popular-ghost-stories-12");
     expect(again).toMatchObject({ decision: "OBSERVE", checkoutId: expect.any(String) });

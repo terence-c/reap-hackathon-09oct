@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS audit (
   decision TEXT NOT NULL,
   rules_json TEXT NOT NULL,
   reason TEXT NOT NULL,
+  checks_json TEXT,
   executed INTEGER NOT NULL DEFAULT 0,
   checkout_id TEXT,
   prev_hash TEXT NOT NULL,
@@ -134,12 +135,19 @@ function seed(db: DB) {
   );
 }
 
+// Columns added after the first release; ALTER existing databases in place.
+function migrate(db: DB) {
+  const auditColumns = (db.prepare(`PRAGMA table_info(audit)`).all() as { name: string }[]).map((c) => c.name);
+  if (!auditColumns.includes("checks_json")) db.exec(`ALTER TABLE audit ADD COLUMN checks_json TEXT`);
+}
+
 function open(file: string): DB {
   if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
   if (file !== ":memory:") db.pragma("journal_mode = WAL");
   db.pragma("busy_timeout = 3000");
   db.exec(SCHEMA);
+  migrate(db);
   seed(db);
   return db;
 }

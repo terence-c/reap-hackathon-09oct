@@ -21,6 +21,18 @@ export class ReapError extends Error {
   }
 }
 
+// True only for a Reap sandbox host (e.g. sg.sandbox.api.reap.global). Checked on the parsed
+// hostname, so "sandbox" in a path or query string of another host does not count.
+export function isSandboxBaseUrl(baseUrl: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(baseUrl);
+    const labels = hostname.toLowerCase().split(".");
+    return protocol === "https:" && labels.includes("sandbox") && hostname.toLowerCase().endsWith(".reap.global");
+  } catch {
+    return false;
+  }
+}
+
 export async function reapFetch<T>(path: string, options: ReapRequest = {}): Promise<T> {
   const method = options.method ?? "GET";
   const url = new URL(path.replace(/^\//, ""), `${env.REAP_BASE_URL.replace(/\/$/, "")}/`);
@@ -30,7 +42,8 @@ export async function reapFetch<T>(path: string, options: ReapRequest = {}): Pro
     "Content-Type": "application/json",
   };
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
-  if (options.simulateCheckout && process.env.NODE_ENV !== "production") {
+  // Sandbox only, whatever the caller asked for.
+  if (options.simulateCheckout && process.env.NODE_ENV !== "production" && isSandboxBaseUrl(env.REAP_BASE_URL)) {
     headers["X-Simulate-Checkout"] = "COMPLETED";
   }
 

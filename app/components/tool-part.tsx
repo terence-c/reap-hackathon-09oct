@@ -207,19 +207,23 @@ type CheckoutStatusResponse = {
 type OrderView =
   | { phase: "waiting"; status?: CheckoutStatus; orderId?: string }
   | { phase: "final"; status: "COMPLETED" | "FAILED" | "EXPIRED"; orderId?: string; finalAmount?: Money }
-  | { phase: "unknown" };
+  // Polling stopped before Reap reported a final status. Neither success nor failure.
+  | { phase: "stopped"; status?: CheckoutStatus; orderId?: string };
 
 const FINAL_STATUSES = new Set<CheckoutStatus>(["COMPLETED", "FAILED", "EXPIRED"]);
 const POLL_MS = 2000;
-const MAX_POLLS = 150; // about 5 minutes, long enough to confirm on Reap's page
+const MAX_POLLS = 150; // about 5 minutes per round; "Check again" starts a new round
 
-// Reap approval links work once, so "Review on Reap" shows only while Reap still needs approval.
+// Reap approval links work once, so "Review on Reap" shows only while Reap still needs approval
+// (or before the first status arrives).
 export function OrderStatus({ checkoutId, approvalUrl }: { checkoutId: string; approvalUrl?: string }) {
   const [view, setView] = useState<OrderView>({ phase: "waiting" });
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     let polls = 0;
+    let last: { status?: CheckoutStatus; orderId?: string } = {};
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     async function poll() {
@@ -240,14 +244,15 @@ export function OrderStatus({ checkoutId, approvalUrl }: { checkoutId: string; a
             });
             return;
           }
-          setView({ phase: "waiting", status: data.status, orderId: data.orderId });
+          last = { status: data.status, orderId: data.orderId };
+          setView({ phase: "waiting", ...last });
         }
       } catch {
-        // Network hiccup: keep waiting until the poll budget runs out.
+        // Network hiccup: keep checking until this round runs out.
       }
       if (cancelled) return;
       if (polls >= MAX_POLLS) {
-        setView({ phase: "unknown" });
+        setView({ phase: "stopped", ...last });
         return;
       }
       timer = setTimeout(() => void poll(), POLL_MS);
@@ -258,57 +263,85 @@ export function OrderStatus({ checkoutId, approvalUrl }: { checkoutId: string; a
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [checkoutId]);
+  }, [checkoutId, round]);
+
+  const needsApproval =
+    view.phase !== "final" && (view.status === undefined || view.status === "REQUIRES_ACTION");
+  const reviewLink =
+    needsApproval && approvalUrl?.startsWith("https://") ? (
+      <a
+        href={approvalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
+      >
+        Review on Reap
+      </a>
+    ) : null;
+  const reference = view.phase !== "final" && view.orderId ? ` Reference ${view.orderId}.` : "";
 
   if (view.phase === "waiting") {
-    const needsApproval = view.status === undefined || view.status === "REQUIRES_ACTION";
     return (
       <>
-        {needsApproval && approvalUrl?.startsWith("https://") && (
-          <a
-            href={approvalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ac-focus-ring mt-2 inline-block rounded-lg bg-violet px-3.5 py-2 text-[12px] font-medium text-white"
-          >
-            Review on Reap
-          </a>
-        )}
+        {reviewLink}
         <p
           role="status"
           aria-live="polite"
-          className="mt-2 flex items-center gap-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[12px] text-blue"
+          className="mt-2 flex items-start gap-2 rounded-lg border border-blue/30 bg-sky px-3 py-2 text-[12px] text-blue"
         >
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue" aria-hidden="true" />
-          {view.status === "PROCESSING"
-            ? `Payment approved. Reap is placing the order with the merchant${view.orderId ? ` (reference ${view.orderId})` : ""}.`
-            : needsApproval && approvalUrl
-              ? "Waiting for your approval on Reap's page..."
-              : "Waiting for Reap..."}
+          <span className="mt-1.5 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-blue" aria-hidden="true" />
+          <span className="min-w-0 break-words">
+            {view.status === "PROCESSING"
+              ? `Payment approved. Reap is placing the order...${reference}`
+              : needsApproval && reviewLink
+                ? "Waiting for you to approve the payment on Reap's page..."
+                : "Waiting for Reap..."}
+          </span>
         </p>
       </>
     );
   }
-  if (view.phase === "unknown") {
+  if (view.phase === "stopped") {
     return (
-      <p role="status" className="mt-2 rounded-lg border border-orange/40 bg-peach px-3 py-2 text-[12px] text-orange">
-        Reap has not confirmed this order yet, so we stopped checking. Do not treat it as placed.
-      </p>
+      <>
+        {reviewLink}
+        <div
+          role="status"
+          className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-paper px-3 py-2 text-[12px] text-ink"
+        >
+          <span className="min-w-0 flex-1 break-words">
+            Reap has not confirmed this yet. Check again later.{reference}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setView({ phase: "waiting", status: view.status, orderId: view.orderId });
+              setRound((n) => n + 1);
+            }}
+            className="ac-focus-ring min-h-[36px] shrink-0 rounded-lg border border-violet bg-white px-3 py-1.5 text-[12px] font-medium text-violet hover:bg-lavender"
+          >
+            Check again
+          </button>
+        </div>
+      </>
     );
   }
   if (view.status === "COMPLETED") {
     const parts = [view.orderId, view.finalAmount ? formatMoney(view.finalAmount) : undefined].filter(Boolean);
     return (
-      <p role="status" className="mt-2 rounded-lg border border-teal/40 bg-mint px-3 py-2 text-[13px] font-medium text-teal">
-        {parts.length > 0 ? `Order confirmed: ${parts.join(" · ")}` : "Order confirmed by Reap"}
+      <p
+        role="status"
+        className="mt-2 break-words rounded-lg border border-teal/40 bg-mint px-3 py-2 text-[13px] font-medium text-teal"
+      >
+        {parts.length > 0 ? `Order confirmed: ${parts.join(" · ")}` : "Order confirmed by Reap."}
       </p>
     );
   }
   return (
     <p role="status" className="mt-2 rounded-lg border border-red/40 bg-rose px-3 py-2 text-[12px] text-red">
       {view.status === "EXPIRED"
-        ? "This order expired on Reap before it was confirmed, so it was not placed."
-        : "Reap could not complete this order, so it was not placed."}
+        ? "The payment was not approved in time, so nothing was bought."
+        : "Reap could not complete this order, so nothing was bought."}
     </p>
   );
 }

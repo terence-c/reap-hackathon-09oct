@@ -7,7 +7,7 @@ export default function OrdersLayout({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-screen bg-paper px-4 pb-8 pt-6 text-ink sm:px-8">
       <div className="mx-auto max-w-[620px]">
-        <header className="ac-reveal flex items-center gap-3 border-b border-line pb-4">
+        <header className="ac-reveal flex flex-wrap items-center gap-3 border-b border-line pb-4">
           <Link href="/" className="ac-focus-ring flex items-center gap-2.5 rounded-md">
             <BrandMark size={26} className="text-violet" />
             <span className="text-[17px] font-medium tracking-tight">AgentCart</span>
