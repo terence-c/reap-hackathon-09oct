@@ -272,11 +272,12 @@ export function createGate(deps: GateDeps): SafrGate {
     for (const row of stale) {
       if (!claim(row.envelope_hash, "EXPIRED", t)) continue;
       releaseReservation(row.envelope_hash, t);
+      const escalated = audit.get(row.audit_seq)!;
       audit.append({
-        envelope: audit.get(row.audit_seq)!.envelope,
+        envelope: escalated.envelope,
         disposition: {
           decision: "DENY",
-          rulesFired: ["APPROVAL_TIMEOUT"],
+          rulesFired: [...escalated.disposition.rulesFired, "APPROVAL_TIMEOUT"],
           reason: `No one approved this within ${minutesText(APPROVAL_WINDOW_MS)}, so it was cancelled and the budget hold released.`,
         },
         now: t,
@@ -418,12 +419,13 @@ export function createGate(deps: GateDeps): SafrGate {
     const row = pendingOrThrow(envelopeHash);
     if (!claim(envelopeHash, "DECLINED", t, reviewer)) throw new GateError("ALREADY_DECIDED", 409, "This request was already decided.");
     releaseReservation(envelopeHash, t);
+    const escalated = audit.get(row.audit_seq)!;
     const disposition: Disposition = {
       decision: "DENY",
-      rulesFired: ["HUMAN_DECLINED"],
+      rulesFired: [...escalated.disposition.rulesFired, "HUMAN_DECLINED"],
       reason: `Declined by ${reviewer}, so nothing was bought and the budget hold was released.`,
     };
-    const envelope = audit.get(row.audit_seq)!.envelope;
+    const envelope = escalated.envelope;
     audit.append({ envelope, disposition, now: t });
     return { decision: "DENY", message: disposition.reason, envelopeHash };
   }

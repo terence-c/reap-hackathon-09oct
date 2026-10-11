@@ -144,7 +144,9 @@ function migrate(db: DB) {
 function open(file: string): DB {
   if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true });
   const db = new Database(file);
-  if (file !== ":memory:") db.pragma("journal_mode = WAL");
+  // Rollback journal, not WAL: scripts (reset-demo, keygen, enroll) write to this file while
+  // next dev holds it open, and a WAL file can be deleted out from under the running server.
+  if (file !== ":memory:") db.pragma("journal_mode = DELETE");
   db.pragma("busy_timeout = 3000");
   db.exec(SCHEMA);
   migrate(db);

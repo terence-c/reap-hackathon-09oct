@@ -96,7 +96,7 @@ describe("gate", () => {
     expect(committed("mandate-001").reserved).toBe(9000);
     expect(await gate.decline(tag.envelopeHash, "terence")).toMatchObject({ decision: "DENY" });
     expect(committed("mandate-001").reserved).toBe(0);
-    expect(audit.latestForEnvelope(tag.envelopeHash)!.disposition.rulesFired).toEqual(["HUMAN_DECLINED"]);
+    expect(audit.latestForEnvelope(tag.envelopeHash)!.disposition.rulesFired).toEqual(["OVER_AUTO_THRESHOLD", "HUMAN_DECLINED"]);
     await expect(gate.approve(tag.envelopeHash, "terence")).rejects.toBeInstanceOf(GateError);
   });
 
@@ -106,7 +106,7 @@ describe("gate", () => {
     clock.advance(5 * MINUTE);
     expect(gate.listPendingApprovals()).toEqual([]);
     expect(getReservation(tag.envelopeHash)?.status).toBe("RELEASED");
-    expect(audit.latestForEnvelope(tag.envelopeHash)!.disposition.rulesFired).toEqual(["APPROVAL_TIMEOUT"]);
+    expect(audit.latestForEnvelope(tag.envelopeHash)!.disposition.rulesFired).toEqual(["OVER_AUTO_THRESHOLD", "APPROVAL_TIMEOUT"]);
     await expect(gate.approve(tag.envelopeHash, "terence")).rejects.toMatchObject({ status: 409 });
   });
 

@@ -27,13 +27,19 @@ export async function POST(request: NextRequest) {
   await connection();
   if (request.headers.has("origin") && !isSameOrigin(request))
     return Response.json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
-  const parsed = BodySchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  if (body === null || typeof body !== "object") return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  const parsed = BodySchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
-      { error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") },
+      { error: parsed.error.issues.map((i) => (i.path.length ? `${i.path.join(".")}: ${i.message}` : i.message)).join("; ") },
       { status: 400 },
     );
-  if (parsed.data.id !== loadMandate().id) return Response.json({ error: "Unknown mandate id" }, { status: 404 });
+  const current = loadMandate();
+  if (parsed.data.id !== current.id) return Response.json({ error: "Unknown mandate id" }, { status: 404 });
+  // The principal is who the agent spends for; it is fixed by the registry, not by this form.
+  if (parsed.data.principalId !== current.principalId)
+    return Response.json({ error: "principalId cannot be changed" }, { status: 400 });
   saveMandate(parsed.data);
   return Response.json(snapshot());
 }

@@ -19,7 +19,7 @@ export const MandateFieldsSchema = z.object({
   currency: z.enum(["SGD", "USD"]),
   totalBudget: z.number().int().nonnegative(),
   autoThreshold: z.number().int().nonnegative(),
-  allowedCategories: z.array(z.string().min(1)),
+  allowedCategories: z.array(z.string().min(1)).min(1, "Choose at least one category"),
   allowedMerchants: z.array(z.string().min(1)).optional(),
   validFrom: z.string().refine((s) => !Number.isNaN(Date.parse(s)), "must be an ISO date"),
   validTo: z.string().refine((s) => !Number.isNaN(Date.parse(s)), "must be an ISO date"),

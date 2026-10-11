@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { isSameOrigin, jsonError, readJsonBody, sessionIdFrom, setSessionCookie } from "@/lib/agent/http";
 import { SYSTEM_PROMPT } from "@/lib/agent/system-prompt";
 import { createAgentTools } from "@/lib/agent/tools";
+import { reapMode } from "@/lib/reap";
 import { committed, loadMandate } from "@/lib/safr/controls";
 import { formatMoney } from "@/lib/safr/disposition";
 
@@ -18,6 +19,10 @@ const isToolPart = (type: string) => type.startsWith("tool-") || type === "dynam
 
 const LIVE_MODE =
   "Runtime: live. Quotes come from Reap's sandbox and an allowed purchase becomes a real Reap sandbox checkout. The sandbox uses test cards, so no real money moves.";
+// REAP_MODE=mock: the UI shows "Offline mode", so the model must not call these real sandbox checkouts.
+const OFFLINE_MODE =
+  "Runtime: offline. Reap is simulated with prices recorded from its sandbox, so nothing goes over the network to Reap and no money moves. An allowed purchase goes to this simulated Reap, not to a real Reap sandbox checkout. Say the order was sent to Reap (simulated) and that the order status card will confirm it once it reports completed.";
+const runtimeNote = () => (reapMode() === "mock" ? OFFLINE_MODE : LIVE_MODE);
 
 // The current spending limits, read from the server on every request. The model may describe them
 // but cannot change them; the gate re-checks every purchase against the stored copy anyway.
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
 
   const result = streamText({
     model,
-    system: `${SYSTEM_PROMPT}\n\n${LIVE_MODE}\n${limits}`,
+    system: `${SYSTEM_PROMPT}\n\n${runtimeNote()}\n${limits}`,
     messages: modelMessages,
     tools: createAgentTools({ agentId: env.AGENT_ID, sessionId }),
     providerOptions: { llm: { reasoningEffort: "none" } },

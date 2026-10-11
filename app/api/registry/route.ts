@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
   await connection();
   if (request.headers.has("origin") && !isSameOrigin(request))
     return Response.json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
-  const parsed = BodySchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  if (body === null || typeof body !== "object") return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
+  const parsed = BodySchema.safeParse(body);
   if (!parsed.success) return Response.json({ error: parsed.error.issues.map((i) => i.message).join("; ") }, { status: 400 });
   const agentId = parsed.data.agentId ?? env.AGENT_ID;
   if (!getAgent(agentId)) return Response.json({ error: `Unknown agent: ${agentId}` }, { status: 404 });

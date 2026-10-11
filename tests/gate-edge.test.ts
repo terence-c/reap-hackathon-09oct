@@ -80,7 +80,7 @@ describe("approvals: single use", () => {
     expect(declined).toMatchObject({ decision: "DENY", envelopeHash: tag.envelopeHash });
     expect(getReservation(tag.envelopeHash)?.status).toBe("RELEASED");
     expect(committed(MANDATE)).toEqual({ reserved: 0, settled: 0 });
-    expect(rulesFor(tag.envelopeHash)).toEqual(["HUMAN_DECLINED"]);
+    expect(rulesFor(tag.envelopeHash)).toEqual(["OVER_AUTO_THRESHOLD", "HUMAN_DECLINED"]);
     const entries = audit.list().length;
 
     await expect(env.gate.decline(tag.envelopeHash, "terence")).rejects.toMatchObject({ code: "ALREADY_DECIDED", status: 409 });
@@ -112,7 +112,7 @@ describe("approvals: timeout (injected clock)", () => {
     expect(committed(MANDATE).reserved).toBe(0);
 
     const timeout = audit.latestForEnvelope(tag.envelopeHash)!;
-    expect(timeout.disposition).toMatchObject({ decision: "DENY", rulesFired: ["APPROVAL_TIMEOUT"] });
+    expect(timeout.disposition).toMatchObject({ decision: "DENY", rulesFired: ["OVER_AUTO_THRESHOLD", "APPROVAL_TIMEOUT"] });
     expect(timeout.disposition.reason).toContain("within 5 minutes");
     expect(timeout.ts).toBe(new Date(env.clock.t).toISOString());
     expect(audit.list().filter((e) => e.disposition.rulesFired.includes("APPROVAL_TIMEOUT"))).toHaveLength(1);
@@ -128,7 +128,7 @@ describe("approvals: timeout (injected clock)", () => {
     const { result: tag } = await propose(env, TAG);
     env.clock.advance(APPROVAL_WINDOW_MS + MINUTE);
     await expect(env.gate.approve(tag.envelopeHash, "terence")).rejects.toMatchObject({ status: 409 });
-    expect(rulesFor(tag.envelopeHash)).toEqual(["APPROVAL_TIMEOUT"]);
+    expect(rulesFor(tag.envelopeHash)).toEqual(["OVER_AUTO_THRESHOLD", "APPROVAL_TIMEOUT"]);
     expect(getReservation(tag.envelopeHash)?.status).toBe("RELEASED");
   });
 });

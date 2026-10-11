@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     checkout ??= await reapAdapter.getCheckout(checkoutId);
   } catch (err) {
     const detail = err instanceof ReapError ? err.code : err instanceof Error ? err.message : String(err);
+    if (err instanceof ReapError && err.status === 404) return reply({ error: "No such checkout." }, 404);
     console.error(`[checkout] Reap status check failed for ${checkoutId}: ${detail}`);
     return reply({ error: `Could not read the checkout from Reap (${detail}).` }, 502);
   }

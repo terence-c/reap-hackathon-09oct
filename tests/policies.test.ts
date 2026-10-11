@@ -88,3 +88,12 @@ describe("checks in the audit log", () => {
     expect(audit.verifyChain()).toMatchObject({ ok: false, brokenAtSeq: entry.seq });
   });
 });
+
+describe("decline and timeout keep the escalation's flag", () => {
+  it("shows the auto limit as flagged and human oversight as failed", () => {
+    const declined = checksFromRules("DENY", ["OVER_AUTO_THRESHOLD", "HUMAN_DECLINED"]);
+    expect(resultOf(declined, "UNDER_AUTO_LIMIT")).toBe("flag");
+    expect(resultOf(declined, "HUMAN_APPROVAL")).toBe("fail");
+    expect(resultOf(declined, "WITHIN_BUDGET_LEFT")).toBe("pass");
+  });
+});

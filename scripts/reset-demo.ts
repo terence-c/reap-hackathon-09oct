@@ -1,33 +1,47 @@
-// npm run reset-demo — clean slate for a demo run: empties the activity log, budget holds,
-// approvals, tool calls and quote records; restores the demo mandate; makes the agent ACTIVE.
-// Keeps the agent's registered public key and the saved Reap card enrollment.
-// Safe to run while `next dev` is running (refresh the page afterwards).
+// npm run reset-demo — clean slate for a demo run (see lib/safr/reset.ts). When the app is running
+// at APP_BASE_URL it asks the server to reset itself, so the running app sees the reset at once;
+// otherwise it resets data/safr.db directly. Refresh the page afterwards.
 
 import "./load-env";
-import demoMandate from "../lib/mandate.demo.json";
+import https from "node:https";
 import { env } from "../lib/env";
-import { computePromptHash, db } from "../lib/safr/db";
-import { setAgentStatus } from "../lib/safr/registry";
+import { resetDemo, type ResetResult } from "../lib/safr/reset";
 
-const database = db();
-database.transaction(() => {
-  for (const table of ["audit", "reservations", "approvals", "tool_calls", "reap_quotes"]) {
-    database.prepare(`DELETE FROM ${table}`).run();
-  }
-  database
-    .prepare(`UPDATE mandates SET version = ?, json = ?, updated_at = ? WHERE id = ?`)
-    .run(demoMandate.version, JSON.stringify(demoMandate), new Date().toISOString(), demoMandate.id);
-})();
-setAgentStatus(env.AGENT_ID, "ACTIVE");
-// The prompt hash is read when the DB opens; refresh it in case lib/agent/system-prompt.ts changed.
-database.prepare(`UPDATE agents SET prompt_hash = ?, model = ? WHERE agent_id = ?`).run(computePromptHash(), env.OPENAI_MODEL, env.AGENT_ID);
+// The local dev server uses a self-signed certificate; only trust it for localhost.
+function resetViaServer(): Promise<ResetResult | null> {
+  const url = new URL("/api/dev/reset", env.APP_BASE_URL);
+  if (!["localhost", "127.0.0.1"].includes(url.hostname)) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const req = https.request(
+      url,
+      { method: "POST", rejectUnauthorized: false, timeout: 5000, headers: { Origin: url.origin, "Content-Length": 0 } },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          try {
+            resolve(res.statusCode === 200 ? (JSON.parse(body) as ResetResult) : null);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    );
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => req.destroy());
+    req.end();
+  });
+}
 
-const card = database.prepare(`SELECT status FROM reap_enrollments WHERE status = 'ACTIVE' LIMIT 1`).get() as
-  | { status: string }
-  | undefined;
-const key = database.prepare(`SELECT public_key FROM agents WHERE agent_id = ?`).get(env.AGENT_ID) as
-  | { public_key: string | null }
-  | undefined;
-console.log("Demo reset: activity log empty, budget S$150.00 free, agent ACTIVE.");
-console.log(`Agent key registered: ${key?.public_key ? "yes" : "NO (run npm run keygen)"}`);
-console.log(`Card ready: ${card || env.REAP_ENROLLMENT_ID ? "yes" : "NO (use Add card in the app)"}`);
+async function main() {
+  const viaServer = await resetViaServer();
+  const result = viaServer ?? resetDemo();
+  console.log(`Demo reset${viaServer ? " (through the running app)" : ""}: activity log empty, budget S$150.00 free, agent ACTIVE.`);
+  console.log(`Agent key registered: ${result.keyRegistered ? "yes" : "NO (run npm run keygen)"}`);
+  console.log(`Card ready: ${result.cardReady ? "yes" : "NO (use Add card in the app)"}`);
+}
+
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});
